@@ -126,6 +126,7 @@ bool uselessDecl = TRUE;
 %type <asts> jump_statement function_body else_statement string_literal
 %type <asts> critical_statement
 %type <ilist> initializer initializer_list
+%type <ilist> designated_struct_initializer designated_struct_initializer_list
 %type <yyint> unary_operator assignment_operator struct_or_union
 
 %start file
@@ -1405,6 +1406,8 @@ initializer
    : assignment_expr                { $$ = newiList(INIT_NODE,$1); }
    | '{'  initializer_list '}'      { $$ = newiList(INIT_DEEP,revinit($2)); }
    | '{'  initializer_list ',' '}'  { $$ = newiList(INIT_DEEP,revinit($2)); }
+   | '{'  designated_struct_initializer_list '}'  { $$ = newiList(INIT_DEEP,revinit($2)); }
+   | '{'  designated_struct_initializer_list ',' '}'  { $$ = newiList(INIT_DEEP,revinit($2)); }
    ;
 
 initializer_list
@@ -1412,6 +1415,15 @@ initializer_list
    | initializer_list ',' initializer  {  $3->next = $1; $$ = $3; }
    ;
 
+designated_struct_initializer
+   : '.' identifier '=' initializer	{ $4->field = $2; $$ = $4; }
+   ;
+
+designated_struct_initializer_list
+   : designated_struct_initializer
+   | designated_struct_initializer_list ',' designated_struct_initializer  {  $3->next = $1; $$ = $3; }
+   ;
+      
 statement
    : labeled_statement
    | compound_statement

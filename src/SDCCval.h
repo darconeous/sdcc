@@ -77,6 +77,7 @@ typedef struct initList
   }
   init;
 
+  struct symbol* field;
   struct initList *next;
 }
 initList;

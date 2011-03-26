@@ -851,26 +851,89 @@ printIvalStruct (symbol * sym, sym_link * type, initList * ilist, struct dbuf_s 
 
   if (SPEC_STRUCT (type)->type == UNION)
     {
+      /* designated initializer support */
+      if(iloop && iloop->field)
+        {
+          /* Find our field */
+          for (sflds = SPEC_STRUCT (type)->fields; sflds; sflds = sflds->next)
+            if(0==strcmp(sflds->name,iloop->field->name))
+              break;
+          if(!sflds)
+            werrorfl (sym->fileDef, sym->lineDef, E_NOT_MEMBER, iloop->field->name);      
+        }
+
       printIval (sym, sflds->type, iloop, oBuf, 1);
       iloop = iloop ? iloop->next : NULL;
+
+      if (iloop)
+        werrorfl (sym->fileDef, sym->lineDef, W_EXCESS_INITIALIZERS, "union", sym->name);      
     }
   else
     {
-      while (sflds)
-        {
-          if (IS_BITFIELD (sflds->type))
-            printIvalBitFields (&sflds, &iloop, oBuf);
-          else
+      if(iloop && iloop->field)
+        { /* this is a designated initializer list */
+          /* C99 was when designated initializers were introduced */
+          if (!options.std_c99)
+            werrorfl (sym->fileDef, sym->lineDef, W_C89_NO_DESIGNATED_INIT,"");
+
+          /* This first pass over ilist is just for catching errors */
+          for (; iloop; iloop=iloop->next)
             {
-              printIval (sym, sflds->type, iloop, oBuf, 1);
-              sflds = sflds->next;
-              iloop = iloop ? iloop->next : NULL;
+              if (!iloop->field)
+                {
+                  /* Inconsistent use of designated initializers */
+                  werrorfl (sym->fileDef, sym->lineDef, E_BAD_DESIGNATED_INIT,"");
+                  continue;
+                }
+
+              /* Find our field */
+              for (sflds = SPEC_STRUCT (type)->fields; sflds; sflds = sflds->next)
+                if(0==strcmp(sflds->name,iloop->field->name))
+                  break;
+
+              if(!sflds)
+                {
+                  /* Couldn't find the named field in the struct. */
+                  werrorfl (sym->fileDef, sym->lineDef, E_NOT_MEMBER,iloop->field->name);
+                  continue;
+                }
             }
+
+          for (sflds = SPEC_STRUCT (type)->fields; sflds;)
+            {
+              for (iloop=ilist->init.deep; iloop; iloop=iloop->next)
+                if(0==strcmp(sflds->name,iloop->field->name))
+                  break;
+                    
+              if (IS_BITFIELD (sflds->type))
+                printIvalBitFields (&sflds, &iloop, oBuf);
+              else
+                {
+                  printIval (sym, sflds->type, iloop, oBuf, 1);
+                  sflds = sflds->next;
+                }
+            }
+          /* TODO: Detect fields initialized twice. */
+        }
+	    else
+        {
+          while (sflds)
+            {
+              if (IS_BITFIELD (sflds->type))
+                printIvalBitFields (&sflds, &iloop, oBuf);
+              else
+                {
+                  printIval (sym, sflds->type, iloop, oBuf, 1);
+                  sflds = sflds->next;
+                  iloop = iloop ? iloop->next : NULL;
+                }
+            }
+
+          if (iloop)
+            werrorfl (sym->fileDef, sym->lineDef, W_EXCESS_INITIALIZERS, "struct", sym->name);
         }
     }
 
-  if (iloop)
-    werrorfl (sym->fileDef, sym->lineDef, W_EXCESS_INITIALIZERS, "struct", sym->name);
 }
 
 /*-----------------------------------------------------------------*/
