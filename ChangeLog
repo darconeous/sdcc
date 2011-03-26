@@ -1,3 +1,8 @@
+2011-03-26 Robert Quattlebaum <darco AT deepdarc.com>
+
+	* src/SDCC.y, src/SDCCast.c, src/SDCCerr.c, src/SDCCerr.h, src/SDCCglue.c, src/SDCCval.c, src/SDCCval.h:
+	  Added support for designated initializers for structs and unions.
+
 2011-05-25 Philipp Klaus Krause <pkk AT spth.de>
 
 	* src/SDCCcse.c (boolCast, cseBBlock):

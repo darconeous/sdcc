@@ -1,4 +1,6 @@
 /* Check basic behaviour of designated initializers
+ * Written by Robert Quattlebaum <darco@deepdarc.com>
+ * PUBLIC DOMAIN
  */
 #include <testfwk.h>
 
