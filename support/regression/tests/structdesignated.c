@@ -47,13 +47,12 @@ struct str1 sl3 = {
 union unn1
 {
 	char a;
-	int b;
-	char x;
+	short b;
 	long c;
 };
 
 union unn1 ul1 = {
-	.b = 2,
+	.b = 0x1337,
 };
 #endif
 
@@ -78,7 +77,7 @@ testDesignatedInitializers1(void) {
 	ASSERT(sl3.x == 0);
 	
 #if SHOULD_TEST_UNIONS_TOO
-	ASSERT(ul1.b == 2);
+	ASSERT(ul1.b == 0x1337);
 #endif
 #endif // #if HAS_DESIGNATED_INITIALIZERS
 }
@@ -107,8 +106,8 @@ testDesignatedInitializers2(void) {
 	};
 
 #if SHOULD_TEST_UNIONS_TOO
-	union unn1 ul2 = { .b = 2, };
-	ASSERT(ul2.b == 2);	
+	union unn1 ul2 = { .b = 0x1337, };
+	ASSERT(ul2.b == 0x1337);	
 #endif
 
 	ASSERT(sl4.a == 1);

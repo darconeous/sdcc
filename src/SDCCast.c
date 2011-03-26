@@ -986,49 +986,76 @@ createIvalStruct (ast * sym, sym_link * type, initList * ilist, ast * rootValue)
 
   iloop = ilist ? ilist->init.deep : NULL;
   if(iloop && iloop->field)
-    { /* this is a designated initializer list */
+    { /* Designated initializer support */
+
       /* C99 was when designated initializers were introduced */
       if (!options.std_c99)
-        werror(W_C89_NO_DESIGNATED_INIT,"");
+        werrorfl (iloop->field->fileDef, iloop->field->lineDef,W_C89_NO_DESIGNATED_INIT,"");
 
-      /* This first pass over ilist is just for catching errors */
-      for (; iloop; iloop=iloop->next)
-        {
-          if (!iloop->field)
-            {
-              /* Inconsistent use of designated initializers */
-              werrorfl (sym->filename, sym->lineno, E_BAD_DESIGNATED_INIT,"");
-              continue;
-            }
-
+      if (SPEC_STRUCT(etype)->type == UNION)
+        { /* Unions */
+          if(iloop->next)
+            /* Too many initializers for a union */
+            werrorfl (sym->opval.val->sym->fileDef, sym->opval.val->sym->lineDef,
+              W_EXCESS_INITIALIZERS, "union", sym->opval.val->sym->name);
+            
           /* Find our field */
           for (sflds = SPEC_STRUCT (type)->fields; sflds; sflds = sflds->next)
             if(0==strcmp(sflds->name,iloop->field->name))
               break;
 
-          if(!sflds)
-            {
-              /* Couldn't find the named field in the struct. */
-              werrorfl (sym->filename, sym->lineno, E_NOT_MEMBER,iloop->field->name);
-              continue;
-            }
-        }
-
-      for (sflds = SPEC_STRUCT (type)->fields; sflds; sflds = sflds->next)
-        {
-          for (iloop=ilist->init.deep; iloop; iloop=iloop->next)
-            if(0==strcmp(sflds->name,iloop->field->name))
-              break;
-                
-          if (!IS_BITFIELD (sflds->type) || !SPEC_BUNNAMED (sflds->etype))
+          if(sflds)
             {
               sflds->implicit = 1;
               lAst = newNode (PTR_OP, newNode ('&', sym, NULL), newAst_VALUE (symbolVal (sflds)));
               lAst = decorateType (resolveSymbols (lAst), RESULT_TYPE_NONE);
               rast = decorateType (resolveSymbols (createIval (lAst, sflds->type, iloop, rast, rootValue)), RESULT_TYPE_NONE);
             }
+          else
+            /* Couldn't find the named field in the struct. */
+            werrorfl (iloop->field->fileDef, iloop->field->lineDef, E_NOT_MEMBER,iloop->field->name);
         }
-      /* TODO: Detect fields named twice. */
+      else
+        { /* Structs */
+          /* This first pass over ilist is just for catching errors */
+          for (; iloop; iloop=iloop->next)
+            { 
+              if (!iloop->field)
+                {
+                  /* Inconsistent use of designated initializers */
+                  werrorfl (sym->filename, sym->lineno, E_BAD_DESIGNATED_INIT,"");
+                  continue;
+                }
+
+              /* Find our field */
+              for (sflds = SPEC_STRUCT (type)->fields; sflds; sflds = sflds->next)
+                if(0==strcmp(sflds->name,iloop->field->name))
+                  break;
+
+              if(!sflds)
+                {
+                  /* Couldn't find the named field in the struct. */
+                  werrorfl (iloop->field->fileDef, iloop->field->lineDef, E_NOT_MEMBER,iloop->field->name);
+                  continue;
+                }
+            }
+
+            for (sflds = SPEC_STRUCT (type)->fields; sflds; sflds = sflds->next)
+              {
+                for (iloop=ilist->init.deep; iloop; iloop=iloop->next)
+                  if(0==strcmp(sflds->name,iloop->field->name))
+                    break;
+
+                if (!IS_BITFIELD (sflds->type) || !SPEC_BUNNAMED (sflds->etype))
+                  {
+                    sflds->implicit = 1;
+                    lAst = newNode (PTR_OP, newNode ('&', sym, NULL), newAst_VALUE (symbolVal (sflds)));
+                    lAst = decorateType (resolveSymbols (lAst), RESULT_TYPE_NONE);
+                    rast = decorateType (resolveSymbols (createIval (lAst, sflds->type, iloop, rast, rootValue)), RESULT_TYPE_NONE);
+                  }
+              }
+            /* TODO: Detect fields initialized twice. */
+        }
     }
   else
     {
@@ -1040,7 +1067,7 @@ createIvalStruct (ast * sym, sym_link * type, initList * ilist, ast * rootValue)
           
           /* Check for inconsistent use of designated initializers */
           if (iloop && iloop->field)
-            werrorfl (sym->filename, sym->lineno, E_BAD_DESIGNATED_INIT,"");
+            werrorfl (iloop->field->fileDef, iloop->field->lineDef, E_BAD_DESIGNATED_INIT,"");
                     
           if (!IS_BITFIELD (sflds->type) || !SPEC_BUNNAMED (sflds->etype))
             {
@@ -1053,13 +1080,13 @@ createIvalStruct (ast * sym, sym_link * type, initList * ilist, ast * rootValue)
         }
 
       if (iloop)
-      {
-        if (IS_AST_VALUE (sym))
-        werrorfl (sym->opval.val->sym->fileDef, sym->opval.val->sym->lineDef,
-              W_EXCESS_INITIALIZERS, "struct", sym->opval.val->sym->name);
-        else
-          werrorfl (sym->filename, sym->lineno, E_INIT_COUNT);
-      }
+        {
+          if (IS_AST_VALUE (sym))
+            werrorfl (sym->opval.val->sym->fileDef, sym->opval.val->sym->lineDef,
+                W_EXCESS_INITIALIZERS, "struct", sym->opval.val->sym->name);
+          else
+            werrorfl (sym->filename, sym->lineno, E_INIT_COUNT);
+        }
     }
 
   return rast;

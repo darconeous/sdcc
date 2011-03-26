@@ -853,16 +853,20 @@ printIvalStruct (symbol * sym, sym_link * type, initList * ilist, struct dbuf_s 
     {
       /* designated initializer support */
       if(iloop && iloop->field)
-        /* Find our field */
-        for (sflds = SPEC_STRUCT (type)->fields; sflds; sflds = sflds->next)
-          if(0==strcmp(sflds->name,iloop->field->name))
-            break;
+        {
+          /* Find our field */
+          for (sflds = SPEC_STRUCT (type)->fields; sflds; sflds = sflds->next)
+            if(0==strcmp(sflds->name,iloop->field->name))
+              break;
+          if(!sflds)
+            werrorfl (sym->fileDef, sym->lineDef, E_NOT_MEMBER, iloop->field->name);      
+        }
 
       printIval (sym, sflds->type, iloop, oBuf, 1);
       iloop = iloop ? iloop->next : NULL;
 
       if (iloop)
-        werrorfl (sym->fileDef, sym->lineDef, W_EXCESS_INITIALIZERS, "struct", sym->name);      
+        werrorfl (sym->fileDef, sym->lineDef, W_EXCESS_INITIALIZERS, "union", sym->name);      
     }
   else
     {
@@ -909,7 +913,7 @@ printIvalStruct (symbol * sym, sym_link * type, initList * ilist, struct dbuf_s 
                   sflds = sflds->next;
                 }
             }
-          /* TODO: Detect fields named twice. */
+          /* TODO: Detect fields initialized twice. */
         }
 	    else
         {
