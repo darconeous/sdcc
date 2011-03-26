@@ -125,7 +125,7 @@ bool uselessDecl = TRUE;
 %type <asts> expression_statement selection_statement iteration_statement
 %type <asts> jump_statement function_body else_statement string_literal
 %type <asts> critical_statement
-%type <ilist> initializer initializer_list
+%type <ilist> initializer initializer_list designated_initializer
 %type <yyint> unary_operator assignment_operator struct_or_union
 
 %start file
@@ -1407,9 +1407,15 @@ initializer
    | '{'  initializer_list ',' '}'  { $$ = newiList(INIT_DEEP,revinit($2)); }
    ;
 
+designated_initializer
+   : '.' identifier '=' initializer	{ $4->field = $2; $$ = $4; }
+   ;
+      
 initializer_list
    : initializer
+   | designated_initializer
    | initializer_list ',' initializer  {  $3->next = $1; $$ = $3; }
+   | initializer_list ',' designated_initializer  {  $3->next = $1; $$ = $3; }
    ;
 
 statement

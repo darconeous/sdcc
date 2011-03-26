@@ -126,6 +126,10 @@ convertIListToConstList (initList * src, literalList ** lList, int size)
         {
           return FALSE;
         }
+	  if (iLoop->field)
+	    {
+		  return FALSE;
+		}
       iLoop = iLoop->next;
       cnt++;
     }
@@ -151,7 +155,6 @@ convertIListToConstList (initList * src, literalList ** lList, int size)
           newL->literalValue = val;
           newL->count = 1;
           newL->next = NULL;
-
           if (last)
             {
               last->next = newL;
@@ -188,7 +191,7 @@ copyLiteralList (literalList * src)
       newL->literalValue = src->literalValue;
       newL->count = src->count;
       newL->next = NULL;
-
+	  
       if (prev)
         {
           prev->next = newL;
@@ -226,7 +229,8 @@ copyIlist (initList * src)
       dest = newiList (INIT_NODE, copyAst (src->init.node));
       break;
     }
-
+  dest->field = src->field;
+  
   if (src->next)
     assert (dest != NULL);
   dest->next = copyIlist (src->next);
