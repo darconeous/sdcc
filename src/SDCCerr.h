@@ -227,6 +227,8 @@
 #define E_OFFSETOF_TYPE               199 /* offsetof can only be applied to structs/unions */
 #define E_INCOMPLETE_FIELD            200 /* struct field has incomplete type */
 #define W_DEPRECATED_OPTION           201 /* deprecated compiler option '%s' */
+#define E_BAD_DESIGNATED_INIT		  202 /* Inconsistant use of designated initialization */
+#define W_C89_NO_DESIGNATED_INIT      203 /* ISO C89 does not support designated initialization */
 
 #define MAX_ERROR_WARNING             256 /* size of disable warnings array */
 
