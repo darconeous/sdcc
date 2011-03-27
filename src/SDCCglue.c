@@ -948,8 +948,7 @@ printIvalArray (symbol * sym, sym_link * type, initList * ilist, struct dbuf_s *
       /* take care of the special   case  */
       /* array of characters can be init  */
       /* by a string                      */
-      if (IS_CHAR (type->next) &&
-	ilist && ilist->type == INIT_NODE && !ilist->next)
+      if (IS_CHAR (type->next) && ilist->type == INIT_NODE)
         {
           val = list2val (ilist);
           if (!val)
@@ -1289,7 +1288,7 @@ printIval (symbol * sym, sym_link * type, initList * ilist, struct dbuf_s *oBuf,
   sym_link *itype;
 
   /* Handle designated initializers */
-  if (ilist)
+  if (ilist && ilist->type==INIT_DEEP)
     ilist = reorderIlist (type, ilist);
 
   /* If this is a hole, substitute an appropriate initializer. */

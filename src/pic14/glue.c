@@ -772,7 +772,7 @@ emitIvals(struct dbuf_s *oBuf, symbol *sym, initList *list, long lit, int size)
         for (i = 0; i < size; i++) {
             if (in_code) {
                 dbuf_printf (oBuf, "\tretlw 0x%02x\n", (int)(lit & 0xff));
-                // dbuf_printf (oBuf, "\tretlw 0x00\n"); // conflict from merge of sf-patch-2991122
+                // dbuf_printf (oBuf, "\tretlw 0x00\n"); // conflict from merge of sf-patch-2991122 ?
             } else {
                 dbuf_printf (oBuf, "%s0x%02x", (i == 0) ? "" : ", ", (int)(lit & 0xff));
             }

@@ -268,7 +268,8 @@ list2val (initList * val)
   if (!val)
     return NULL;
 
-  assert (val->type != INIT_HOLE);
+  if(val->type == INIT_HOLE)
+    return NULL;
 
   if (val->type == INIT_DEEP)
     return list2val (val->init.deep);
@@ -478,7 +479,7 @@ initList *reorderIlist (sym_link * type, initList * ilist)
 
   /* special case: check for string initializer */
   if (IS_ARRAY (type) && IS_CHAR (type->next) &&
-      ilist && ilist->type == INIT_NODE && !ilist->next)
+      ilist && ilist->type == INIT_NODE)
     {
       ast *iast = ilist->init.node;
       value *v = (iast->type == EX_VALUE ? iast->opval.val : NULL);

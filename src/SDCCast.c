@@ -1106,7 +1106,7 @@ createIvalArray (ast * sym, sym_link * type, initList * ilist, ast * rootValue)
   /* array of characters can be init  */
   /* by a string                      */
   if (IS_CHAR (type->next) &&
-      ilist && ilist->type == INIT_NODE && !ilist->next)
+      ilist && ilist->type == INIT_NODE)
     if ((rast = createIvalCharPtr (sym,
                                    type,
                                    decorateType (resolveSymbols (list2expr (ilist)), RESULT_TYPE_NONE),
@@ -1129,7 +1129,7 @@ createIvalArray (ast * sym, sym_link * type, initList * ilist, ast * rootValue)
       return NULL;
     }
 
-  if (port->arrayInitializerSuppported && convertIListToConstList (ilist, &literalL, lcnt))
+  if (port->arrayInitializerSuppported && convertIListToConstList (reorderIlist(type,ilist), &literalL, lcnt))
     {
       ast *aSym;
 
@@ -1154,12 +1154,12 @@ createIvalArray (ast * sym, sym_link * type, initList * ilist, ast * rootValue)
         {
           ast *aSym;
 
-          if (!iloop && (!lcnt || !DCL_ELEM (type) || !AST_SYMBOL (rootValue)->islocal || SPEC_STAT (etype)))
+          if (!iloop && ((lcnt && size >= lcnt) || !DCL_ELEM (type) || !AST_SYMBOL (rootValue)->islocal || SPEC_STAT (etype)))
             {
               break;
             }
 
-          if (iloop->designation)
+          if (iloop && iloop->designation)
             {
               if (iloop->designation->type != DESIGNATOR_ARRAY)
                 {
@@ -1179,7 +1179,7 @@ createIvalArray (ast * sym, sym_link * type, initList * ilist, ast * rootValue)
               size = idx + 1;
             }
           /* too many initializers? */
-          if (lcnt && size > lcnt)
+          if (iloop && (lcnt && size > lcnt))
             {
               // is this a better way? at least it won't crash
               char *name = (IS_AST_SYM_VALUE (sym)) ? AST_SYMBOL (sym)->name : "";

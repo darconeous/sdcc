@@ -716,7 +716,7 @@ pic16_printIvalArray (symbol * sym, sym_link * type, initList * ilist,
   /* array of characters can be init  */
   /* by a string                      */
   if (IS_CHAR (type->next) &&
-      ilist && ilist->type == INIT_NODE && !ilist->next) {
+      ilist && ilist->type == INIT_NODE) {
     if (!IS_LITERAL(list2val(ilist)->etype)) {
       werror (W_INIT_WRONG);
       return;
