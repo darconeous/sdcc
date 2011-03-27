@@ -4,10 +4,15 @@
 #define SDCCGLOBL_H
 
 #include <memory.h>
-#include <assert.h>
 #include <stdlib.h>
 #include <setjmp.h>
 #include <stdio.h>
+
+#if !defined _MSC_VER
+#include <stdbool.h>
+#elif !defined __cplusplus
+typedef unsigned char bool;
+#endif
 
 #include "SDCCset.h"
 
@@ -75,7 +80,6 @@
 #endif
 
 #define  MAX_REG_PARMS  1
-typedef int bool;
 
 #ifndef max
 #  define max(a,b) (a > b ? a : b)
@@ -245,6 +249,7 @@ struct options
     int xram_movc;              /* use movc instead of movx to read xram (mcs51) */
     int nopeep;                 /* no peep hole optimization */
     int asmpeep;                /* pass inline assembler thru peep hole */
+    int peepReturn;             /* enable peephole optimization for return instructions */
     int debug;                  /* generate extra debug info */
     int c1mode;                 /* Act like c1 - no pre-proc, asm or link */
     char *peep_file;            /* additional rules for peep hole */
@@ -264,8 +269,9 @@ struct options
     int protect_sp_update;      /* DS390 - will disable interrupts during ESP:SP updates */
     int parms_in_bank1;         /* DS390 - use reg bank1 to pass parameters */
     int stack_size;             /* MCS51/DS390 - Tells the linker to allocate this space for stack */
-    int no_pack_iram;           /* MCS51/DS390 - Tells the linker not to pack variables in internal ram */
+    int no_pack_iram;           /* MCS51/DS390 - Deprecated: Tells the linker not to pack variables in internal ram */
     int acall_ajmp;             /* MCS51 - Use acall/ajmp instead of lcall/ljmp */
+    int use_non_free;           /* Search / include non-free licensed libraries and header files */
     /* starting address of the segments */
     int xstack_loc;             /* initial location of external stack */
     int stack_loc;              /* initial value of internal stack pointer */
@@ -297,6 +303,7 @@ struct options
     set *calleeSavesSet;        /* list of functions using callee save */
     set *excludeRegsSet;        /* registers excluded from saving */
 /*  set *olaysSet;               * not implemented yet: overlay segments used in #pragma OVERLAY */
+    int max_allocs_per_node;    /* Maximum number of allocations considered at each node in the tree-decomposition based register allocator */
   };
 
 /* forward definition for variables accessed globally */
@@ -304,14 +311,12 @@ extern int noAssemble;          /* no assembly, stop after code generation */
 extern char *yytext;
 extern char *lexFilename;       /* lex idea of current file name */
 extern int lexLineno;           /* lex idea of line number of the current file */
-extern char *fullSrcFileName;   /* full name for the source file; */
+extern const char *fullSrcFileName; /* full name for the source file; */
                                 /* can be NULL while linking without compiling */
-extern char *fullDstFileName;   /* full name for the output file; */
+extern const char *fullDstFileName; /* full name for the output file; */
                                 /* only given by -o, otherwise NULL */
-extern char *dstFileName;       /* destination file name without extension */
-extern char *dstPath;           /* path for the output files; */
-                                /* "" is equivalent with cwd */
-extern char *moduleName;        /* module name is source file without path and extension */
+extern const char *dstFileName; /* destination file name without extension */
+extern const char *moduleName;  /* module name is source file without path and extension */
                                 /* can be NULL while linking without compiling */
 extern int seqPointNo;          /* current sequence point */
 extern FILE *yyin;              /* */
@@ -351,19 +356,19 @@ void setParseWithComma (set **, const char *);
 
 #define wassert(a)    wassertl(a,"code generator internal error")
 
-#define DUMP_RAW0 1
-#define DUMP_RAW1 DUMP_RAW0+1
-#define DUMP_CSE DUMP_RAW1+1
-#define DUMP_DFLOW DUMP_CSE+1
-#define DUMP_GCSE DUMP_DFLOW+1
+#define DUMP_RAW0     1
+#define DUMP_RAW1     DUMP_RAW0+1
+#define DUMP_CSE      DUMP_RAW1+1
+#define DUMP_DFLOW    DUMP_CSE+1
+#define DUMP_GCSE     DUMP_DFLOW+1
 #define DUMP_DEADCODE DUMP_GCSE+1
-#define DUMP_LOOP DUMP_DEADCODE+1
-#define DUMP_LOOPG DUMP_LOOP+1
-#define DUMP_LOOPD DUMP_LOOPG+1
-#define DUMP_RANGE DUMP_LOOPD+1
-#define DUMP_PACK DUMP_RANGE+1
-#define DUMP_RASSGN DUMP_PACK+1
-#define DUMP_LRANGE DUMP_RASSGN+1
+#define DUMP_LOOP     DUMP_DEADCODE+1
+#define DUMP_LOOPG    DUMP_LOOP+1
+#define DUMP_LOOPD    DUMP_LOOPG+1
+#define DUMP_RANGE    DUMP_LOOPD+1
+#define DUMP_PACK     DUMP_RANGE+1
+#define DUMP_RASSGN   DUMP_PACK+1
+#define DUMP_LRANGE   DUMP_RASSGN+1
 
 struct _dumpFiles {
   int id;

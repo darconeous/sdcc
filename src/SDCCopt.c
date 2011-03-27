@@ -74,82 +74,82 @@ cnvToFcall (iCode * ic, eBBlock * ebp)
   if (IS_SYMOP (right))
       bitVectUnSetBit (OP_USES (right), ic->key);
 
-  if (IS_FLOAT (operandType (right))) {
-    switch (ic->op)
-      {
-      case '+':
-        func = __fsadd;
-        break;
-      case '-':
-        func = __fssub;
-        break;
-      case '/':
-        func = __fsdiv;
-        break;
-      case '*':
-        func = __fsmul;
-        break;
-      case EQ_OP:
-        func = __fseq;
-        break;
-      case NE_OP:
-        func = __fsneq;
-        break;
-      case '<':
-        func = __fslt;
-        break;
-      case '>':
-        func = __fsgt;
-        break;
-      case LE_OP:
-        func = __fslteq;
-        break;
-      case GE_OP:
-        func = __fsgteq;
-        break;
-      }
-  } else
-  if (IS_FIXED16X16 (operandType (right))) {
-    switch (ic->op)
-      {
-      case '+':
-        func = __fps16x16_add;
-        break;
-      case '-':
-        func = __fps16x16_sub;
-        break;
-      case '/':
-        func = __fps16x16_div;
-        break;
-      case '*':
-        func = __fps16x16_mul;
-        break;
-      case EQ_OP:
-        func = __fps16x16_eq;
-        break;
-      case NE_OP:
-        func = __fps16x16_neq;
-        break;
-      case '<':
-        func = __fps16x16_lt;
-        break;
-      case '>':
-        func = __fps16x16_gt;
-        break;
-      case LE_OP:
-        func = __fps16x16_lteq;
-        break;
-      case GE_OP:
-        func = __fps16x16_gteq;
-        break;
-      }
-  }
-
+  if (IS_FLOAT (operandType (right)))
+    {
+      switch (ic->op)
+        {
+        case '+':
+          func = fsadd;
+          break;
+        case '-':
+          func = fssub;
+          break;
+        case '/':
+          func = fsdiv;
+          break;
+        case '*':
+          func = fsmul;
+          break;
+        case EQ_OP:
+          func = fseq;
+          break;
+        case NE_OP:
+          func = fsneq;
+          break;
+        case '<':
+          func = fslt;
+          break;
+        case '>':
+          func = fsgt;
+          break;
+        case LE_OP:
+          func = fslteq;
+          break;
+        case GE_OP:
+          func = fsgteq;
+          break;
+        }
+    }
+  else if (IS_FIXED16X16 (operandType (right)))
+    {
+      switch (ic->op)
+        {
+        case '+':
+          func = fps16x16_add;
+          break;
+        case '-':
+          func = fps16x16_sub;
+          break;
+        case '/':
+          func = fps16x16_div;
+          break;
+        case '*':
+          func = fps16x16_mul;
+          break;
+        case EQ_OP:
+          func = fps16x16_eq;
+          break;
+        case NE_OP:
+          func = fps16x16_neq;
+          break;
+        case '<':
+          func = fps16x16_lt;
+          break;
+        case '>':
+          func = fps16x16_gt;
+          break;
+        case LE_OP:
+          func = fps16x16_lteq;
+          break;
+        case GE_OP:
+          func = fps16x16_gteq;
+          break;
+        }
+    }
 
   /* if float support routines NOT compiled as reentrant */
   if (!options.float_rent)
     {
-
       /* first one */
       if (IS_REGPARM (FUNC_ARGS(func->type)->etype))
         {
@@ -184,11 +184,9 @@ cnvToFcall (iCode * ic, eBBlock * ebp)
       newic->lineno = lineno;
       if (IS_SYMOP (right))
           OP_USES (right) = bitVectSetBit (OP_USES (right), newic->key);
-
     }
   else
     {
-
       /* push right */
       if (IS_REGPARM (FUNC_ARGS(func->type)->next->etype))
         {
@@ -224,8 +222,7 @@ cnvToFcall (iCode * ic, eBBlock * ebp)
       newic->filename = filename;
       newic->lineno = lineno;
       if (IS_SYMOP (left))
-          OP_USES (left) = bitVectSetBit (OP_USES (left), newic->key);
-
+        OP_USES (left) = bitVectSetBit (OP_USES (left), newic->key);
     }
   /* insert the call */
   newic = newiCode (CALL, operandFromSymbol (func), NULL);
@@ -239,18 +236,20 @@ cnvToFcall (iCode * ic, eBBlock * ebp)
   if (currFunc)
     FUNC_HASFCALL (currFunc->type) = 1;
 
-  if(TARGET_IS_PIC16 || TARGET_IS_PIC) {
-        /* normally these functions aren't marked external, so we can use their
-         * _extern field to marked as already added to symbol table */
+  if (TARGET_PIC_LIKE)
+    {
+      /* normally these functions aren't marked external, so we can use their
+       * _extern field to mark as already added to symbol table */
 
-        if(!SPEC_EXTR(func->etype)) {
-            memmap *seg = SPEC_OCLS(OP_SYMBOL(IC_LEFT(newic))->etype);
+      if (!SPEC_EXTR(func->etype))
+        {
+          memmap *seg = SPEC_OCLS(OP_SYMBOL(IC_LEFT(newic))->etype);
 
-            SPEC_EXTR(func->etype) = 1;
-            seg = SPEC_OCLS( func->etype );
-            addSet(&seg->syms, func);
+          SPEC_EXTR(func->etype) = 1;
+          seg = SPEC_OCLS( func->etype );
+          addSet(&seg->syms, func);
         }
-  }
+    }
 
   addiCodeToeBBlock (ebp, newic, ip);
 }
@@ -276,18 +275,19 @@ cnvToFloatCast (iCode * ic, eBBlock * ebp)
     {
       for (su = 0; su < 2; su++)
         {
-          if (compareType (type, __multypes[bwd][su]) == 1)
+          if (compareType (type, multypes[bwd][su]) == 1)
             {
-              func = __conv[0][bwd][su];
+              func = conv[0][bwd][su];
               goto found;
             }
         }
     }
 
-  if(compareType (type, fixed16x16Type) == 1) {
-    func = __fp16x16conv[0][3][0];
-    goto found;
-  }
+  if (compareType (type, fixed16x16Type) == 1)
+    {
+      func = fp16x16conv[0][3][0];
+      goto found;
+    }
 
   assert (0);
 found:
@@ -309,21 +309,21 @@ found:
       addiCodeToeBBlock (ebp, newic, ip);
       newic->filename = filename;
       newic->lineno = linenno;
-
     }
   else
     {
       /* push the left */
-      if (IS_REGPARM (FUNC_ARGS(func->type)->etype)) {
-        newic = newiCode (SEND, IC_RIGHT (ic), NULL);
-        newic->argreg = SPEC_ARGREG(FUNC_ARGS(func->type)->etype);
-      }
+      if (IS_REGPARM (FUNC_ARGS(func->type)->etype))
+        {
+          newic = newiCode (SEND, IC_RIGHT (ic), NULL);
+          newic->argreg = SPEC_ARGREG(FUNC_ARGS(func->type)->etype);
+        }
       else
-      {
-        newic = newiCode (IPUSH, IC_RIGHT (ic), NULL);
-        newic->parmPush = 1;
-        bytesPushed += getSize(operandType(IC_RIGHT(ic)));
-      }
+        {
+          newic = newiCode (IPUSH, IC_RIGHT (ic), NULL);
+          newic->parmPush = 1;
+          bytesPushed += getSize(operandType(IC_RIGHT(ic)));
+        }
       addiCodeToeBBlock (ebp, newic, ip);
       newic->filename = filename;
       newic->lineno = linenno;
@@ -337,18 +337,20 @@ found:
   if (currFunc)
     FUNC_HASFCALL (currFunc->type) = 1;
 
-  if(TARGET_IS_PIC16 || TARGET_IS_PIC) {
-        /* normally these functions aren't marked external, so we can use their
-         * _extern field to marked as already added to symbol table */
+  if (TARGET_PIC_LIKE)
+    {
+      /* normally these functions aren't marked external, so we can use their
+       * _extern field to marked as already added to symbol table */
 
-        if(!SPEC_EXTR(func->etype)) {
-            memmap *seg = SPEC_OCLS(OP_SYMBOL(IC_LEFT(newic))->etype);
+      if (!SPEC_EXTR(func->etype))
+        {
+          memmap *seg = SPEC_OCLS(OP_SYMBOL(IC_LEFT(newic))->etype);
 
-            SPEC_EXTR(func->etype) = 1;
-            seg = SPEC_OCLS( func->etype );
-            addSet(&seg->syms, func);
+          SPEC_EXTR(func->etype) = 1;
+          seg = SPEC_OCLS( func->etype );
+          addSet(&seg->syms, func);
         }
-  }
+    }
 
   addiCodeToeBBlock (ebp, newic, ip);
   newic->filename = filename;
@@ -376,9 +378,9 @@ cnvToFixed16x16Cast (iCode * ic, eBBlock * ebp)
     {
       for (su = 0; su < 2; su++)
         {
-          if (compareType (type, __multypes[bwd][su]) == 1)
+          if (compareType (type, multypes[bwd][su]) == 1)
             {
-              func = __fp16x16conv[0][bwd][su];
+              func = fp16x16conv[0][bwd][su];
               goto found;
             }
         }
@@ -390,11 +392,11 @@ found:
   if (!options.float_rent)
     {
       /* first one */
-        if (IS_REGPARM (FUNC_ARGS(func->type)->etype))
-            {
-                newic = newiCode (SEND, IC_RIGHT (ic), NULL);
-                newic->argreg = SPEC_ARGREG(FUNC_ARGS(func->type)->etype);
-            }
+      if (IS_REGPARM (FUNC_ARGS(func->type)->etype))
+        {
+          newic = newiCode (SEND, IC_RIGHT (ic), NULL);
+          newic->argreg = SPEC_ARGREG(FUNC_ARGS(func->type)->etype);
+        }
       else
         {
           newic = newiCode ('=', NULL, IC_RIGHT (ic));
@@ -403,14 +405,14 @@ found:
       addiCodeToeBBlock (ebp, newic, ip);
       newic->filename = filename;
       newic->lineno = linenno;
-
     }
   else
     {
       /* push the left */
-        if (IS_REGPARM (FUNC_ARGS(func->type)->etype)) {
-            newic = newiCode (SEND, IC_RIGHT (ic), NULL);
-            newic->argreg = SPEC_ARGREG(FUNC_ARGS(func->type)->etype);
+      if (IS_REGPARM (FUNC_ARGS(func->type)->etype))
+        {
+          newic = newiCode (SEND, IC_RIGHT (ic), NULL);
+          newic->argreg = SPEC_ARGREG(FUNC_ARGS(func->type)->etype);
         }
       else
         {
@@ -431,18 +433,20 @@ found:
   if (currFunc)
     FUNC_HASFCALL (currFunc->type) = 1;
 
-  if(TARGET_IS_PIC16 || TARGET_IS_PIC) {
-        /* normally these functions aren't marked external, so we can use their
-         * _extern field to marked as already added to symbol table */
+  if (TARGET_PIC_LIKE)
+    {
+      /* normally these functions aren't marked external, so we can use their
+       * _extern field to marked as already added to symbol table */
 
-        if(!SPEC_EXTR(func->etype)) {
-            memmap *seg = SPEC_OCLS(OP_SYMBOL(IC_LEFT(newic))->etype);
+      if (!SPEC_EXTR(func->etype))
+        {
+          memmap *seg = SPEC_OCLS(OP_SYMBOL(IC_LEFT(newic))->etype);
 
-                SPEC_EXTR(func->etype) = 1;
-                seg = SPEC_OCLS( func->etype );
-                addSet(&seg->syms, func);
+          SPEC_EXTR(func->etype) = 1;
+          seg = SPEC_OCLS( func->etype );
+          addSet(&seg->syms, func);
         }
-  }
+    }
 
   addiCodeToeBBlock (ebp, newic, ip);
   newic->filename = filename;
@@ -472,9 +476,9 @@ cnvFromFloatCast (iCode * ic, eBBlock * ebp)
     {
       for (su = 0; su < 2; su++)
         {
-          if (compareType (type, __multypes[bwd][su]) == 1)
+          if (compareType (type, multypes[bwd][su]) == 1)
             {
-              func = __conv[1][bwd][su];
+              func = conv[1][bwd][su];
               goto found;
             }
         }
@@ -486,9 +490,10 @@ found:
   if (!options.float_rent)
     {
       /* first one */
-        if (IS_REGPARM (FUNC_ARGS(func->type)->etype)) {
-            newic = newiCode (SEND, IC_RIGHT (ic), NULL);
-            newic->argreg = SPEC_ARGREG(FUNC_ARGS(func->type)->etype);
+      if (IS_REGPARM (FUNC_ARGS(func->type)->etype))
+        {
+          newic = newiCode (SEND, IC_RIGHT (ic), NULL);
+          newic->argreg = SPEC_ARGREG(FUNC_ARGS(func->type)->etype);
         }
       else
         {
@@ -498,15 +503,14 @@ found:
       addiCodeToeBBlock (ebp, newic, ip);
       newic->filename = filename;
       newic->lineno = lineno;
-
     }
   else
     {
-
       /* push the left */
-        if (IS_REGPARM (FUNC_ARGS(func->type)->etype)) {
-            newic = newiCode (SEND, IC_RIGHT (ic), NULL);
-            newic->argreg = SPEC_ARGREG(FUNC_ARGS(func->type)->etype);
+      if (IS_REGPARM (FUNC_ARGS(func->type)->etype))
+        {
+          newic = newiCode (SEND, IC_RIGHT (ic), NULL);
+          newic->argreg = SPEC_ARGREG(FUNC_ARGS(func->type)->etype);
         }
       else
         {
@@ -517,7 +521,6 @@ found:
       addiCodeToeBBlock (ebp, newic, ip);
       newic->filename = filename;
       newic->lineno = lineno;
-
     }
 
   /* make the call */
@@ -528,18 +531,20 @@ found:
   if (currFunc)
     FUNC_HASFCALL (currFunc->type) = 1;
 
-  if(TARGET_IS_PIC16 || TARGET_IS_PIC) {
-        /* normally these functions aren't marked external, so we can use their
-         * _extern field to marked as already added to symbol table */
+  if (TARGET_PIC_LIKE)
+    {
+      /* normally these functions aren't marked external, so we can use their
+       * _extern field to marked as already added to symbol table */
 
-        if(!SPEC_EXTR(func->etype)) {
-            memmap *seg = SPEC_OCLS(OP_SYMBOL(IC_LEFT(newic))->etype);
+      if (!SPEC_EXTR(func->etype))
+        {
+          memmap *seg = SPEC_OCLS(OP_SYMBOL(IC_LEFT(newic))->etype);
 
-                SPEC_EXTR(func->etype) = 1;
-                seg = SPEC_OCLS( func->etype );
-                addSet(&seg->syms, func);
+          SPEC_EXTR(func->etype) = 1;
+          seg = SPEC_OCLS( func->etype );
+          addSet(&seg->syms, func);
         }
-  }
+    }
 
   addiCodeToeBBlock (ebp, newic, ip);
   newic->filename = filename;
@@ -569,9 +574,9 @@ cnvFromFixed16x16Cast (iCode * ic, eBBlock * ebp)
     {
       for (su = 0; su < 2; su++)
         {
-          if (compareType (type, __multypes[bwd][su]) == 1)
+          if (compareType (type, multypes[bwd][su]) == 1)
             {
-              func = __fp16x16conv[1][bwd][su];
+              func = fp16x16conv[1][bwd][su];
               goto found;
             }
         }
@@ -579,7 +584,7 @@ cnvFromFixed16x16Cast (iCode * ic, eBBlock * ebp)
 
   if (compareType (type, floatType) == 1)
     {
-      func = __fp16x16conv[1][3][0];
+      func = fp16x16conv[1][3][0];
       goto found;
     }
 
@@ -590,9 +595,10 @@ found:
   if (!options.float_rent)
     {
       /* first one */
-        if (IS_REGPARM (FUNC_ARGS(func->type)->etype)) {
-            newic = newiCode (SEND, IC_RIGHT (ic), NULL);
-            newic->argreg = SPEC_ARGREG(FUNC_ARGS(func->type)->etype);
+      if (IS_REGPARM (FUNC_ARGS(func->type)->etype))
+        {
+          newic = newiCode (SEND, IC_RIGHT (ic), NULL);
+          newic->argreg = SPEC_ARGREG(FUNC_ARGS(func->type)->etype);
         }
       else
         {
@@ -605,11 +611,11 @@ found:
     }
   else
     {
-
       /* push the left */
-        if (IS_REGPARM (FUNC_ARGS(func->type)->etype)) {
-            newic = newiCode (SEND, IC_RIGHT (ic), NULL);
-            newic->argreg = SPEC_ARGREG(FUNC_ARGS(func->type)->etype);
+      if (IS_REGPARM (FUNC_ARGS(func->type)->etype))
+        {
+          newic = newiCode (SEND, IC_RIGHT (ic), NULL);
+          newic->argreg = SPEC_ARGREG(FUNC_ARGS(func->type)->etype);
         }
       else
         {
@@ -630,18 +636,20 @@ found:
   if (currFunc)
     FUNC_HASFCALL (currFunc->type) = 1;
 
-  if(TARGET_IS_PIC16 || TARGET_IS_PIC) {
-        /* normally these functions aren't marked external, so we can use their
-         * _extern field to marked as already added to symbol table */
+  if (TARGET_PIC_LIKE)
+    {
+      /* normally these functions aren't marked external, so we can use their
+       * _extern field to marked as already added to symbol table */
 
-        if(!SPEC_EXTR(func->etype)) {
-            memmap *seg = SPEC_OCLS(OP_SYMBOL(IC_LEFT(newic))->etype);
+      if (!SPEC_EXTR(func->etype))
+        {
+          memmap *seg = SPEC_OCLS(OP_SYMBOL(IC_LEFT(newic))->etype);
 
-                SPEC_EXTR(func->etype) = 1;
-                seg = SPEC_OCLS( func->etype );
-                addSet(&seg->syms, func);
+          SPEC_EXTR(func->etype) = 1;
+          seg = SPEC_OCLS( func->etype );
+          addSet(&seg->syms, func);
         }
-  }
+    }
 
   addiCodeToeBBlock (ebp, newic, ip);
   newic->filename = filename;
@@ -685,10 +693,10 @@ convilong (iCode * ic, eBBlock * ebp)
 
       for (su = 0; su < 4 && muldivmod >= 0; su++)
         {
-          if ((compareType (leftType, __multypes[0][su%2]) == 1) &&
-              (compareType (rightType, __multypes[0][su/2]) == 1))
+          if ((compareType (leftType, multypes[0][su%2]) == 1) &&
+              (compareType (rightType, multypes[0][su/2]) == 1))
             {
-              func = __muldiv[muldivmod][0][su];
+              func = muldiv[muldivmod][0][su];
               goto found;
             }
         }
@@ -699,28 +707,30 @@ convilong (iCode * ic, eBBlock * ebp)
     {
       for (su = 0; su < 2; su++)
         {
-          if (compareType (leftType, __multypes[bwd][su]) == 1)
+          if (compareType (leftType, multypes[bwd][su]) == 1)
             {
-              if ((op=='*' || op=='/' || op=='%') &&
-                  compareType (rightType, __multypes[bwd][su]) != 1)
+              if ((op=='*' || op=='/' || op=='%'))
                 {
-                  assert(0);
+                  int ret = compareType (rightType, multypes[bwd][su]);
+                  if (ret != 1)
+                    {
+                      assert(0);
+                    }
                 }
-
               if (op == '*')
-                func = __muldiv[0][bwd][su];
+                func = muldiv[0][bwd][su];
               else if (op == '/')
-                func = __muldiv[1][bwd][su];
+                func = muldiv[1][bwd][su];
               else if (op == '%')
-                func = __muldiv[2][bwd][su];
+                func = muldiv[2][bwd][su];
               else if (op == RRC)
-                func = __rlrr[1][bwd][su];
+                func = rlrr[1][bwd][su];
               else if (op == RLC)
-                func = __rlrr[0][bwd][su];
+                func = rlrr[0][bwd][su];
               else if (op == RIGHT_OP)
-                func = __rlrr[1][bwd][su];
+                func = rlrr[1][bwd][su];
               else if (op == LEFT_OP)
-                func = __rlrr[0][bwd][su];
+                func = rlrr[0][bwd][su];
               else
                 assert (0);
               goto found;
@@ -733,9 +743,10 @@ found:
   if (!options.intlong_rent)
     {
       /* first one */
-        if (IS_REGPARM (FUNC_ARGS(func->type)->etype)) {
-            newic = newiCode (SEND, IC_LEFT (ic), NULL);
-            newic->argreg = SPEC_ARGREG(FUNC_ARGS(func->type)->etype);
+      if (IS_REGPARM (FUNC_ARGS(func->type)->etype))
+        {
+          newic = newiCode (SEND, IC_LEFT (ic), NULL);
+          newic->argreg = SPEC_ARGREG(FUNC_ARGS(func->type)->etype);
         }
       else
         {
@@ -747,10 +758,11 @@ found:
       newic->lineno = lineno;
 
       /* second one */
-      if (IS_REGPARM (FUNC_ARGS(func->type)->next->etype)) {
+      if (IS_REGPARM (FUNC_ARGS(func->type)->next->etype))
+        {
           newic = newiCode (SEND, IC_RIGHT (ic), NULL);
           newic->argreg = SPEC_ARGREG(FUNC_ARGS(func->type)->next->etype);
-      }
+        }
       else
         {
           newic = newiCode ('=', NULL, IC_RIGHT (ic));
@@ -759,7 +771,6 @@ found:
       addiCodeToeBBlock (ebp, newic, ip);
       newic->filename = filename;
       newic->lineno = lineno;
-
     }
   else
     {
@@ -797,7 +808,6 @@ found:
       addiCodeToeBBlock (ebp, newic, ip);
       newic->filename = filename;
       newic->lineno = lineno;
-
     }
 
   /* for the result */
@@ -810,20 +820,96 @@ found:
   if (currFunc)
     FUNC_HASFCALL (currFunc->type) = 1;
 
-  if(TARGET_IS_PIC || TARGET_IS_PIC16) {
-        /* normally these functions aren't marked external, so we can use their
-         * _extern field to marked as already added to symbol table */
+  if (TARGET_PIC_LIKE)
+    {
+      /* normally these functions aren't marked external, so we can use their
+       * _extern field to marked as already added to symbol table */
 
-        if(!SPEC_EXTR(func->etype)) {
-            memmap *seg = SPEC_OCLS(OP_SYMBOL(IC_LEFT(newic))->etype);
+      if (!SPEC_EXTR(func->etype))
+        {
+          memmap *seg = SPEC_OCLS(OP_SYMBOL(IC_LEFT(newic))->etype);
 
-                SPEC_EXTR(func->etype) = 1;
-                seg = SPEC_OCLS( func->etype );
-                addSet(&seg->syms, func);
+          SPEC_EXTR(func->etype) = 1;
+          seg = SPEC_OCLS( func->etype );
+          addSet(&seg->syms, func);
         }
-  }
+    }
 
   addiCodeToeBBlock (ebp, newic, ip);
+}
+
+/*-----------------------------------------------------------------*/
+/* convertbuiltin - maybe convert some builtins back               */
+/*-----------------------------------------------------------------*/
+static void
+convbuiltin (iCode *const ic, eBBlock * ebp)
+{
+  sym_link *ftype;
+  symbol *bif;
+  int stack;
+
+  iCode *icc = ic, *icp = ic->prev, *ico;
+  iCode *lastparam = ic;
+  while (icc->op != CALL)
+    {
+      if (icc->op != SEND || !icc->builtinSEND)
+        return;
+      lastparam = icc;
+      icc = icc->next;
+    }
+
+  if (!IS_SYMOP (IC_LEFT(icc)))
+    return;
+
+  ftype = operandType (IC_LEFT(icc));
+  if (!IFFUNC_ISBUILTIN (ftype))
+    return;
+
+  bif = OP_SYMBOL (IC_LEFT (icc));
+
+  /* Now we can be sure to have found a builtin function. */
+
+  if (TARGET_IS_Z80 && !strcmp (bif->name, "__builtin_memcpy"))
+    {
+      /* Replace iff return value is used or last parameter is not an integer constant. */
+      if (bitVectIsZero (OP_USES (IC_RESULT (icc))) && IS_OP_LITERAL (IC_LEFT (lastparam)))
+        return;
+      
+      strcpy(OP_SYMBOL (IC_LEFT (icc))->rname, "_memcpy");
+    }
+  else
+    return;
+
+  /* Convert parameter passings from SEND to PUSH. */
+  stack = 0;
+  for (icc = ic; icc->op != CALL; icc = icc->next)
+    {
+      icc->builtinSEND = 0;
+      icc->op = IPUSH;
+      icc->parmPush = 1;
+      stack += getSize (operandType (IC_LEFT (icc)));
+    }
+  icc->parmBytes = stack;
+
+  /* Reverse parameters. */
+  for (icc = ic; icc->op != CALL; icc = icc->next)
+    {
+      if(icc->next->op != CALL)
+        icc->prev = icc->next;
+      else
+        icc->prev = icp;
+    }
+  if(icc != ic)
+    {
+      if(icp)
+        icp->next = icc->prev;
+      icc->prev = ic;
+    }
+  for(; icc != icp; ico = icc, icc = icc->prev)
+    {
+      if(icc->op != CALL)
+        icc->next = ico;
+    }
 }
 
 /*-----------------------------------------------------------------*/
@@ -842,13 +928,10 @@ convertToFcall (eBBlock ** ebbs, int count)
       /* for all instructions in the block do */
       for (ic = ebbs[i]->sch; ic; ic = ic->next)
         {
-
           /* floating point operations are
              converted to function calls */
-          if ((IS_CONDITIONAL (ic) ||
-               IS_ARITHMETIC_OP (ic)) &&
-              (IS_FLOAT (operandType (IC_RIGHT (ic))) ||
-               IS_FIXED( operandType (IC_RIGHT (ic)))))
+          if ((IS_CONDITIONAL (ic) || IS_ARITHMETIC_OP (ic)) &&
+              (IS_FLOAT (operandType (IC_RIGHT (ic))) || IS_FIXED( operandType (IC_RIGHT (ic)))))
             {
               cnvToFcall (ic, ebbs[i]);
             }
@@ -930,6 +1013,10 @@ convertToFcall (eBBlock ** ebbs, int count)
                   convilong (ic, ebbs[i]);
                 }
             }
+          if (ic->op == SEND && ic->builtinSEND)
+            {
+              convbuiltin(ic, ebbs[i]);
+            }
         }
     }
 }
@@ -1004,7 +1091,6 @@ replaceRegEqv (ebbIndex * ebbi)
               continue;
             }
 
-
           if (ic->op == JUMPTABLE)
             {
               if (IC_JTCOND (ic) &&
@@ -1044,9 +1130,11 @@ replaceRegEqv (ebbIndex * ebbi)
                   IC_RESULT (ic)->isaddr = 1;
                 }
               else
-                IC_RESULT (ic) = opFromOpWithDU (OP_REQV (IC_RESULT (ic)),
-                                                 OP_DEFS (IC_RESULT (ic)),
-                                                 OP_USES (IC_RESULT (ic)));
+                {
+                  IC_RESULT (ic) = opFromOpWithDU (OP_REQV (IC_RESULT (ic)),
+                                                   OP_DEFS (IC_RESULT (ic)),
+                                                   OP_USES (IC_RESULT (ic)));
+                }
             }
 
           if (IC_RIGHT (ic) &&
@@ -1151,7 +1239,6 @@ killDeadCode (ebbIndex * ebbi)
   int gchange = 0;
   int i = 0;
 
-
   /* basic algorithm :-                                          */
   /* first the exclusion rules :-                                */
   /*  1. if result is a global or volatile then skip             */
@@ -1232,9 +1319,7 @@ killDeadCode (ebbIndex * ebbi)
                   for (j = 0; j < count; ebbs[j++]->visited = 0);
 
                   /* find out if this definition is alive */
-                  if (applyToSet (ebbs[i]->succList,
-                                  isDefAlive,
-                                  ic))
+                  if (applyToSet (ebbs[i]->succList, isDefAlive, ic))
                     continue;
 
                   kill = 1;
@@ -1335,7 +1420,6 @@ killDeadCode (ebbIndex * ebbi)
                         bitVectUnSetBit (OP_USES (IC_RIGHT (ic)), ic->key);
                     }
                 }
-
             }                   /* end of all instructions */
 
           if (!ebbs[i]->sch && !ebbs[i]->noPath)
@@ -1589,25 +1673,28 @@ eBBlockFromiCode (iCode * ic)
   /* sort it back by block number */
   //qsort (ebbs, saveCount, sizeof (eBBlock *), bbNumCompare);
 
-  if (!options.lessPedantic) {
-    // this is a good place to check missing return values
-    if (currFunc) {
-      // the user is on his own with naked functions...
-      if (!IS_VOID(currFunc->etype)
-       && !FUNC_ISNAKED(currFunc->type)) {
-        eBBlock *bp;
-        // make sure all predecessors of the last block end in a return
-        for (bp=setFirstItem(ebbi->bbOrder[ebbi->count-1]->predList);
-             bp;
-             bp=setNextItem(ebbi->bbOrder[ebbi->count-1]->predList)) {
-          if (bp->ech->op != RETURN) {
-            werrorfl (bp->ech->filename, bp->ech->lineno,
-                      W_VOID_FUNC, currFunc->name);
-          }
+  if (!options.lessPedantic)
+    {
+      // this is a good place to check missing return values
+      if (currFunc)
+        {
+          // the user is on his own with naked functions...
+          if (!IS_VOID(currFunc->etype) && !FUNC_ISNAKED(currFunc->type))
+            {
+              eBBlock *bp;
+              // make sure all predecessors of the last block end in a return
+              for (bp=setFirstItem(ebbi->bbOrder[ebbi->count-1]->predList);
+                   bp;
+                   bp=setNextItem(ebbi->bbOrder[ebbi->count-1]->predList))
+                {
+                  if (bp->ech->op != RETURN)
+                    {
+                      werrorfl (bp->ech->filename, bp->ech->lineno, W_VOID_FUNC, currFunc->name);
+                    }
+                }
+            }
         }
-      }
     }
-  }
 
   /* if cyclomatic info requested then print it */
   if (options.cyclomatic)

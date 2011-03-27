@@ -93,6 +93,12 @@ extern const struct lang_hooks lang_hooks;
 /*
  * From toplev.h
  */
+/* If we haven't already defined a frontend specific diagnostics
+   style, use the generic one.  */
+#ifndef GCC_DIAG_STYLE
+#define GCC_DIAG_STYLE __gcc_tdiag__
+#endif
+
 extern void internal_error (const char *, ...) ATTRIBUTE_PRINTF_1
      ATTRIBUTE_NORETURN;
 /* Pass one of the OPT_W* from options.h as the first parameter.  */
@@ -102,6 +108,7 @@ extern void fatal_error (const char *, ...) ATTRIBUTE_PRINTF_1
      ATTRIBUTE_NORETURN;
 extern void inform (const char *, ...) ATTRIBUTE_PRINTF_1;
 
+extern const char *progname;
 extern bool exit_after_options;
 
 extern void print_version (FILE *, const char *);
@@ -142,6 +149,11 @@ extern int flag_signed_char;
    Usually these are warnings about failure to conform to some standard.  */
 
 extern int flag_pedantic_errors;
+
+/*
+ * From options.h
+ */
+extern int inhibit_warnings;
 
 /*
  * From c-common.h
@@ -226,5 +238,21 @@ union tree_node
  * From diagnostic.h
  */
 extern int errorcount;
+
+/*
+ * From c-tree.h
+ */
+/* In order for the format checking to accept the C frontend
+   diagnostic framework extensions, you must include this file before
+   toplev.h, not after.  */
+#if GCC_VERSION >= 4001
+#define ATTRIBUTE_GCC_CDIAG(m, n) __attribute__ ((__format__ (GCC_DIAG_STYLE, m ,n))) ATTRIBUTE_NONNULL(m)
+#else
+#define ATTRIBUTE_GCC_CDIAG(m, n) ATTRIBUTE_NONNULL(m)
+#endif
+
+extern bool c_cpp_error (cpp_reader *, int, location_t, unsigned int,
+			 const char *, va_list *)
+     ATTRIBUTE_GCC_CDIAG(5,0);
 
 #endif  /* __SDCPP_H */

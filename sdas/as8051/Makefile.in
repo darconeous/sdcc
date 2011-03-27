@@ -12,7 +12,7 @@ CC              = @CC@
 CPP             = @CPP@
 INSTALL         = @INSTALL@
 STRIP           = @STRIP@
-MAKEDEP         = @MAKEDEP
+MAKEDEP         = @MAKEDEP@
 
 top_builddir    = @top_builddir@
 top_srcdir      = @top_srcdir@
@@ -34,9 +34,10 @@ EXEEXT          = @EXEEXT@
 
 VPATH           = @srcdir@
 
-CPPFLAGS        = @CPPFLAGS@ -I. -I$(srcdir) -I$(srcdir)/../asxxsrc -I$(srcdir)/../../support/Util
-CFLAGS          = @CFLAGS@ @WALL_FLAG@ -DINDEXLIB -I. -I$(srcdir) -I$(srcdir)/../asxxsrc -I$(srcdir)/../../support/Util
-LDFLAGS         = @LDFLAGS@ -lm
+CPPFLAGS        = @CPPFLAGS@ -DSDCDB -DNOICE -DINDEXLIB -I. -I$(srcdir) -I$(srcdir)/../asxxsrc -I$(srcdir)/../../support/Util
+CFLAGS          = @CFLAGS@ @WALL_FLAG@ $(CPPFLAGS)
+LDFLAGS         = @LDFLAGS@
+LIBS            = -lm
 
 OBJDIR = obj
 
@@ -45,7 +46,7 @@ UTILSRC = dbuf.c dbuf_string.c
 UTILLIBOBJS = $(UTILSRC:%.c=$(OBJDIR)/%.o)
 
 ASXXLIB = $(srcdir)/../asxxsrc
-ASXXLIBSRC = asdata.c asexpr.c aslex.c aslist.c asmain.c asnoice.c asout.c assubr.c assym.c sdas.c strcmpi.c
+ASXXLIBSRC = asdbg.c asdata.c asexpr.c aslex.c aslist.c asmain.c asout.c assubr.c assym.c sdas.c strcmpi.c
 ASXXLIBOBJS = $(ASXXLIBSRC:%.c=$(OBJDIR)/%.o)
 
 SRC = i51ext.c i51pst.c i51mch.c i51adr.c
@@ -65,7 +66,7 @@ transform       = @program_transform_name@
 all: checkconf $(ASX)
 
 $(ASX): $(ASOBJECTS)
-	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(ASOBJECTS)
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(ASOBJECTS) $(LIBS)
 
 # Compiling and installing everything and running test
 # ----------------------------------------------------

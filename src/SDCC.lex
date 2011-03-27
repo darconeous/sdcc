@@ -29,6 +29,7 @@ H       [a-fA-F0-9]
 E       [Ee][+-]?{D}+
 FS      (f|F|l|L)
 IS      (u|U|l|L)*
+HASH	(#|%:)
 
 %{
 #include <stdio.h>
@@ -46,8 +47,6 @@ IS      (u|U|l|L)*
 
 #define TKEYWORD99(token) return (options.std_c99 ? token : check_type())
 
-extern char *filename;
-extern int lineno;
 int column = 0;         /* current column */
 
 /* global definitions */
@@ -72,7 +71,7 @@ static void deprecated_keyword (char *yytext);
 %x asm
 %%
 _?"_asm"         {
-  count();
+  count ();
   if (yytext[1] != '_') /* deprecated single underscore */
     {      
       if (!options.std_sdcc)
@@ -88,7 +87,7 @@ _?"_asm"         {
   BEGIN (asm);
 }
 <asm>_?"_endasm" {
-  count();
+  count ();
   if (yytext[1] != '_') /* deprecated single underscore */
     {
       if (!options.std_sdcc)
@@ -109,195 +108,196 @@ _?"_asm"         {
     }
 }
 <asm>\n        {
-  count();
+  count ();
   dbuf_append_char(&asmbuff, *yytext);
 }
 <asm>.         {
   dbuf_append_char(&asmbuff, *yytext);
 }
-"at"           { count(); TKEYWORDSDCC(AT); }
-"__at"         { count(); TKEYWORD(AT); }
-"auto"         { count(); return(AUTO); }
-"bit"          { count(); TKEYWORDSDCC(BIT); }
-"__bit"        { count(); TKEYWORD(BIT); }
-"_Bool"        { count(); TKEYWORD99(BOOL); }
-"break"        { count(); return(BREAK); }
-"case"         { count(); return(CASE); }
-"char"         { count(); return(CHAR); }
-"code"         { count(); TKEYWORDSDCC(CODE); }
-"__code"       { count(); TKEYWORD(CODE); }
-"const"        { count(); return(CONST); }
-"continue"     { count(); return(CONTINUE); }
-"critical"     { count(); TKEYWORDSDCC(CRITICAL); }
-"__critical"   { count(); TKEYWORD(CRITICAL); }
-"data"         { count(); TKEYWORDSDCC(DATA); }
-"__data"       { count(); TKEYWORD(DATA); }
-"default"      { count(); return(DEFAULT); }
-"do"           { count(); return(DO); }
-"double"       { count(); werror(W_DOUBLE_UNSUPPORTED);return(FLOAT); }
-"else"         { count(); return(ELSE); }
-"enum"         { count(); return(ENUM); }
-"extern"       { count(); return(EXTERN); }
-"far"          { count(); TKEYWORDSDCC(XDATA); }
-"__far"        { count(); TKEYWORD(XDATA); }
-"eeprom"       { count(); TKEYWORDSDCC(EEPROM); }
-"__eeprom"     { count(); TKEYWORD(EEPROM); }
-"float"        { count(); return(FLOAT); }
-"fixed16x16"   { count(); TKEYWORDSDCC(FIXED16X16); }
-"__fixed16x16" { count(); TKEYWORD(FIXED16X16); }
-"flash"        { count(); TKEYWORDSDCC(CODE); }
-"__flash"      { count(); TKEYWORD(CODE); }
-"for"          { count(); return(FOR); }
-"goto"         { count(); return(GOTO); }
-"idata"        { count(); TKEYWORDSDCC(IDATA); }
-"__idata"      { count(); TKEYWORD(IDATA); }
-"if"           { count(); return(IF); }
-"int"          { count(); return(INT); }
-"interrupt"    { count(); TKEYWORDSDCC(INTERRUPT); }
-"__interrupt"  { count(); TKEYWORD(INTERRUPT); }
-"nonbanked"    { count(); TKEYWORDSDCC(NONBANKED); }
-"__nonbanked"  { count(); TKEYWORD(NONBANKED); }
-"banked"       { count(); TKEYWORDSDCC(BANKED); }
-"__banked"     { count(); TKEYWORD(BANKED); }
-"long"         { count(); return(LONG); }
-"near"         { count(); TKEYWORDSDCC(DATA); }
-"__near"       { count(); TKEYWORD(DATA); }
-"pdata"        { count(); TKEYWORDSDCC(PDATA); }
-"__pdata"      { count(); TKEYWORD(PDATA); }
-"reentrant"    { count(); TKEYWORDSDCC(REENTRANT); }
-"__reentrant"  { count(); TKEYWORD(REENTRANT); }
-"shadowregs"   { count(); TKEYWORDSDCC(SHADOWREGS); }
-"__shadowregs" { count(); TKEYWORD(SHADOWREGS); }
-"wparam"       { count(); TKEYWORDSDCC(WPARAM); }
-"__wparam"     { count(); TKEYWORD(WPARAM); }
-"register"     { count(); return(REGISTER); }
-"return"       { count(); return(RETURN); }
-"sfr"          { count(); TKEYWORDSDCC(SFR); }
-"__sfr"        { count(); TKEYWORD(SFR); }
-"sfr16"        { count(); TKEYWORDSDCC(SFR16); }
-"__sfr16"      { count(); TKEYWORD(SFR16); }
-"sfr32"        { count(); TKEYWORDSDCC(SFR32); }
-"__sfr32"      { count(); TKEYWORD(SFR32); }
-"sbit"         { count(); TKEYWORDSDCC(SBIT); }
-"__sbit"       { count(); TKEYWORD(SBIT); }
-"short"        { count(); return(SHORT); }
-"signed"       { count(); return(SIGNED); }
-"sizeof"       { count(); return(SIZEOF); }
-"sram"         { count(); TKEYWORDSDCC(XDATA); }
-"__sram"       { count(); TKEYWORD(XDATA); }
-"static"       { count(); return(STATIC); }
-"struct"       { count(); return(STRUCT); }
-"switch"       { count(); return(SWITCH); }
-"typedef"      { count(); return(TYPEDEF); }
-"union"        { count(); return(UNION); }
-"unsigned"     { count(); return(UNSIGNED); }
-"void"         { count(); return(VOID); }
-"volatile"     { count(); return(VOLATILE); }
-"using"        { count(); TKEYWORDSDCC(USING); }
-"__using"      { count(); TKEYWORD(USING); }
-"_naked"       { count(); TKEYWORDSDCC(NAKED); }
-"__naked"      { count(); TKEYWORD(NAKED); }
-"while"        { count(); return(WHILE); }
-"xdata"        { count(); TKEYWORDSDCC(XDATA); }
-"__xdata"      { count(); TKEYWORD(XDATA); }
-"..."          { count(); return(VAR_ARGS); }
-"__typeof"     { count(); return TYPEOF; }
-"_JavaNative"  { count(); TKEYWORD(JAVANATIVE); }
-"_overlay"     { count(); TKEYWORDSDCC(OVERLAY); }
-"__overlay"    { count(); TKEYWORD(OVERLAY); }
-"inline"       { count(); TKEYWORD99(INLINE); }
-"restrict"     { count(); TKEYWORD99(RESTRICT); }
+"at"           { count (); TKEYWORDSDCC (AT); }
+"__at"         { count (); TKEYWORD (AT); }
+"auto"         { count (); return AUTO; }
+"bit"          { count (); TKEYWORDSDCC (BIT); }
+"__bit"        { count (); TKEYWORD (BIT); }
+"_Bool"        { count (); TKEYWORD99 (BOOL); }
+"break"        { count (); return BREAK; }
+"case"         { count (); return CASE; }
+"char"         { count (); return CHAR; }
+"code"         { count (); TKEYWORDSDCC (CODE); }
+"__code"       { count (); TKEYWORD (CODE); }
+"const"        { count (); return CONST; }
+"continue"     { count (); return CONTINUE; }
+"critical"     { count (); TKEYWORDSDCC (CRITICAL); }
+"__critical"   { count (); TKEYWORD (CRITICAL); }
+"data"         { count (); TKEYWORDSDCC (DATA); }
+"__data"       { count (); TKEYWORD (DATA); }
+"default"      { count (); return DEFAULT; }
+"do"           { count (); return DO; }
+"double"       { count (); werror (W_DOUBLE_UNSUPPORTED); return FLOAT; }
+"else"         { count (); return ELSE; }
+"enum"         { count (); return ENUM; }
+"extern"       { count (); return EXTERN; }
+"far"          { count (); TKEYWORDSDCC (XDATA); }
+"__far"        { count (); TKEYWORD (XDATA); }
+"eeprom"       { count (); TKEYWORDSDCC (EEPROM); }
+"__eeprom"     { count (); TKEYWORD (EEPROM); }
+"float"        { count (); return FLOAT; }
+"fixed16x16"   { count (); TKEYWORDSDCC (FIXED16X16); }
+"__fixed16x16" { count (); TKEYWORD (FIXED16X16); }
+"flash"        { count (); TKEYWORDSDCC (CODE); }
+"__flash"      { count (); TKEYWORD (CODE); }
+"for"          { count (); return FOR; }
+"goto"         { count (); return GOTO; }
+"idata"        { count (); TKEYWORDSDCC (IDATA); }
+"__idata"      { count (); TKEYWORD (IDATA); }
+"if"           { count (); return IF; }
+"int"          { count (); return INT; }
+"interrupt"    { count (); TKEYWORDSDCC (INTERRUPT); }
+"__interrupt"  { count (); TKEYWORD (INTERRUPT); }
+"nonbanked"    { count (); TKEYWORDSDCC (NONBANKED); }
+"__nonbanked"  { count (); TKEYWORD (NONBANKED); }
+"banked"       { count (); TKEYWORDSDCC (BANKED); }
+"__banked"     { count (); TKEYWORD (BANKED); }
+"long"         { count (); return LONG; }
+"near"         { count (); TKEYWORDSDCC (DATA); }
+"__near"       { count (); TKEYWORD (DATA); }
+"pdata"        { count (); TKEYWORDSDCC (PDATA); }
+"__pdata"      { count (); TKEYWORD (PDATA); }
+"reentrant"    { count (); TKEYWORDSDCC (REENTRANT); }
+"__reentrant"  { count (); TKEYWORD (REENTRANT); }
+"shadowregs"   { count (); TKEYWORDSDCC (SHADOWREGS); }
+"__shadowregs" { count (); TKEYWORD (SHADOWREGS); }
+"wparam"       { count (); TKEYWORDSDCC (WPARAM); }
+"__wparam"     { count (); TKEYWORD (WPARAM); }
+"register"     { count (); return REGISTER; }
+"return"       { count (); return RETURN; }
+"sfr"          { count (); TKEYWORDSDCC (SFR); }
+"__sfr"        { count (); TKEYWORD (SFR); }
+"sfr16"        { count (); TKEYWORDSDCC (SFR16); }
+"__sfr16"      { count (); TKEYWORD (SFR16); }
+"sfr32"        { count (); TKEYWORDSDCC (SFR32); }
+"__sfr32"      { count (); TKEYWORD (SFR32); }
+"sbit"         { count (); TKEYWORDSDCC (SBIT); }
+"__sbit"       { count (); TKEYWORD (SBIT); }
+"short"        { count (); return SHORT; }
+"signed"       { count (); return SIGNED; }
+"sizeof"       { count (); return SIZEOF; }
+"__builtin_offsetof" { count (); return OFFSETOF; }
+"sram"         { count (); TKEYWORDSDCC (XDATA); }
+"__sram"       { count (); TKEYWORD (XDATA); }
+"static"       { count (); return STATIC; }
+"struct"       { count (); return STRUCT; }
+"switch"       { count (); return SWITCH; }
+"typedef"      { count (); return TYPEDEF; }
+"union"        { count (); return UNION; }
+"unsigned"     { count (); return UNSIGNED; }
+"void"         { count (); return VOID; }
+"volatile"     { count (); return VOLATILE; }
+"using"        { count (); TKEYWORDSDCC (USING); }
+"__using"      { count (); TKEYWORD (USING); }
+"_naked"       { count (); TKEYWORDSDCC (NAKED); }
+"__naked"      { count (); TKEYWORD (NAKED); }
+"while"        { count (); return WHILE; }
+"xdata"        { count (); TKEYWORDSDCC (XDATA); }
+"__xdata"      { count (); TKEYWORD (XDATA); }
+"..."          { count (); return VAR_ARGS; }
+"__typeof"     { count (); return TYPEOF; }
+"_JavaNative"  { count (); TKEYWORD (JAVANATIVE); }
+"_overlay"     { count (); TKEYWORDSDCC (OVERLAY); }
+"__overlay"    { count (); TKEYWORD (OVERLAY); }
+"inline"       { count (); TKEYWORD99 (INLINE); }
+"restrict"     { count (); TKEYWORD99 (RESTRICT); }
 {L}({L}|{D})*  {
-  if (!options.dollars_in_ident && strchr(yytext, '$'))
+  if (!options.dollars_in_ident && strchr (yytext, '$'))
     {
-      yyerror("stray '$' in program");
+      yyerror ("stray '$' in program");
     }
-  count();
-  return(check_type());
+  count ();
+  return check_type();
 }
 0[bB]{B}+{IS}? {
   if (!options.std_sdcc)
     {
-      yyerror("binary (0b) constants are not allowed in ISO C");
+      yyerror ("binary (0b) constants are not allowed in ISO C");
     }
-  count();
-  yylval.val = constVal(yytext);
-  return(CONSTANT);
+  count ();
+  yylval.val = constVal (yytext);
+  return CONSTANT;
 }
-0[xX]{H}+{IS}? { count(); yylval.val = constVal(yytext); return(CONSTANT); }
-0[0-7]*{IS}?     { count(); yylval.val = constVal(yytext); return(CONSTANT); }
-[1-9]{D}*{IS}?      { count(); yylval.val = constVal(yytext); return(CONSTANT); }
-'(\\.|[^\\'])+' { count();yylval.val = charVal (yytext); return(CONSTANT); /* ' make syntax highliter happy */ }
-{D}+{E}{FS}?   { count(); yylval.val = constFloatVal(yytext);return(CONSTANT); }
-{D}*"."{D}+({E})?{FS}?  { count(); yylval.val = constFloatVal(yytext);return(CONSTANT); }
-{D}+"."{D}*({E})?{FS}?  { count(); yylval.val = constFloatVal(yytext);return(CONSTANT); }
-\"             { count(); yylval.val=strVal(stringLiteral()); return(STRING_LITERAL); }
-">>="          { count(); yylval.yyint = RIGHT_ASSIGN ; return(RIGHT_ASSIGN); }
-"<<="          { count(); yylval.yyint = LEFT_ASSIGN  ; return(LEFT_ASSIGN); }
-"+="           { count(); yylval.yyint = ADD_ASSIGN   ; return(ADD_ASSIGN); }
-"-="           { count(); yylval.yyint = SUB_ASSIGN   ; return(SUB_ASSIGN); }
-"*="           { count(); yylval.yyint = MUL_ASSIGN   ; return(MUL_ASSIGN); }
-"/="           { count(); yylval.yyint = DIV_ASSIGN   ; return(DIV_ASSIGN); }
-"%="           { count(); yylval.yyint = MOD_ASSIGN   ; return(MOD_ASSIGN); }
-"&="           { count(); yylval.yyint = AND_ASSIGN   ; return(AND_ASSIGN); }
-"^="           { count(); yylval.yyint = XOR_ASSIGN   ; return(XOR_ASSIGN); }
-"|="           { count(); yylval.yyint = OR_ASSIGN    ; return(OR_ASSIGN); }
-">>"           { count(); return(RIGHT_OP); }
-"<<"           { count(); return(LEFT_OP); }
-"++"           { count(); return(INC_OP); }
-"--"           { count(); return(DEC_OP); }
-"->"           { count(); return(PTR_OP); }
-"&&"           { count(); return(AND_OP); }
-"||"           { count(); return(OR_OP); }
-"<="           { count(); return(LE_OP); }
-">="           { count(); return(GE_OP); }
-"=="           { count(); return(EQ_OP); }
-"!="           { count(); return(NE_OP); }
-";"            { count(); return(';'); }
-"{"            { count(); NestLevel++ ; ignoreTypedefType = 0; return('{'); }
-"}"            { count(); NestLevel--; return('}'); }
-","            { count(); return(','); }
-":"            { count(); return(':'); }
-"="            { count(); return('='); }
-"("            { count(); ignoreTypedefType = 0; return('('); }
-")"            { count(); return(')'); }
-"["            { count(); return('['); }
-"]"            { count(); return(']'); }
-"."            { count(); return('.'); }
-"&"            { count(); return('&'); }
-"!"            { count(); return('!'); }
-"~"            { count(); return('~'); }
-"-"            { count(); return('-'); }
-"+"            { count(); return('+'); }
-"*"            { count(); return('*'); }
-"/"            { count(); return('/'); }
-"%"            { count(); return('%'); }
-"<"            { count(); return('<'); }
-">"            { count(); return('>'); }
-"^"            { count(); return('^'); }
-"|"            { count(); return('|'); }
-"?"            { count(); return('?'); }
-^#pragma.*$    { count(); process_pragma(yytext); }
-^(#line.*"\n")|(#.*"\n") { count(); checkCurrFile(yytext); }
+0[xX]{H}+{IS}? { count (); yylval.val = constVal (yytext); return CONSTANT; }
+0[0-7]*{IS}?     { count (); yylval.val = constVal (yytext); return CONSTANT; }
+[1-9]{D}*{IS}?      { count (); yylval.val = constVal (yytext); return CONSTANT; }
+'(\\.|[^\\'])+' { count (); yylval.val = charVal (yytext); return CONSTANT; /* ' make syntax highliter happy */ }
+{D}+{E}{FS}?   { count (); yylval.val = constFloatVal (yytext);return CONSTANT; }
+{D}*"."{D}+({E})?{FS}?  { count (); yylval.val = constFloatVal (yytext);return CONSTANT; }
+{D}+"."{D}*({E})?{FS}?  { count (); yylval.val = constFloatVal (yytext);return CONSTANT; }
+\"             { count (); yylval.val = strVal (stringLiteral ()); return STRING_LITERAL; }
+">>="          { count (); yylval.yyint = RIGHT_ASSIGN; return RIGHT_ASSIGN; }
+"<<="          { count (); yylval.yyint = LEFT_ASSIGN; return LEFT_ASSIGN; }
+"+="           { count (); yylval.yyint = ADD_ASSIGN; return ADD_ASSIGN; }
+"-="           { count (); yylval.yyint = SUB_ASSIGN; return SUB_ASSIGN; }
+"*="           { count (); yylval.yyint = MUL_ASSIGN; return MUL_ASSIGN; }
+"/="           { count (); yylval.yyint = DIV_ASSIGN; return DIV_ASSIGN; }
+"%="           { count (); yylval.yyint = MOD_ASSIGN; return MOD_ASSIGN; }
+"&="           { count (); yylval.yyint = AND_ASSIGN; return AND_ASSIGN; }
+"^="           { count (); yylval.yyint = XOR_ASSIGN; return XOR_ASSIGN; }
+"|="           { count (); yylval.yyint = OR_ASSIGN; return OR_ASSIGN; }
+">>"           { count (); return RIGHT_OP; }
+"<<"           { count (); return LEFT_OP; }
+"++"           { count (); return INC_OP; }
+"--"           { count (); return DEC_OP; }
+"->"           { count (); return PTR_OP; }
+"&&"           { count (); return AND_OP; }
+"||"           { count (); return OR_OP; }
+"<="           { count (); return LE_OP; }
+">="           { count (); return GE_OP; }
+"=="           { count (); return EQ_OP; }
+"!="           { count (); return NE_OP; }
+";"            { count (); return ';'; }
+"{"|"<%"       { count (); ++NestLevel; ignoreTypedefType = 0; return '{'; }
+"}"|"%>"       { count (); --NestLevel; return '}'; }
+","            { count (); return ','; }
+":"            { count (); return ':'; }
+"="            { count (); return '='; }
+"("            { count (); ignoreTypedefType = 0; return '('; }
+")"            { count (); return ')'; }
+"["|"<:"       { count (); return '['; }
+"]"|":>"       { count (); return ']'; }
+"."            { count (); return '.'; }
+"&"            { count (); return '&'; }
+"!"            { count (); return '!'; }
+"~"            { count (); return '~'; }
+"-"            { count (); return '-'; }
+"+"            { count (); return '+'; }
+"*"            { count (); return '*'; }
+"/"            { count (); return '/'; }
+"%"            { count (); return '%'; }
+"<"            { count (); return '<'; }
+">"            { count (); return '>'; }
+"^"            { count (); return '^'; }
+"|"            { count (); return '|'; }
+"?"            { count (); return '?'; }
+^{HASH}pragma.*$    { count (); process_pragma (yytext); }
+^({HASH}line.*"\n")|({HASH}.*"\n") { count (); checkCurrFile (yytext); }
 
-^[^(]+"("[0-9]+") : error"[^\n]+ { werror(E_PRE_PROC_FAILED, yytext); count(); }
-^[^(]+"("[0-9]+") : warning"[^\n]+ { werror(W_PRE_PROC_WARNING, yytext); count(); }
-"\r\n"         { count(); }
-"\n"           { count(); }
-[ \t\v\f]      { count(); }
+^[^(]+"("[0-9]+") : error"[^\n]+ { werror (E_PRE_PROC_FAILED, yytext); count (); }
+^[^(]+"("[0-9]+") : warning"[^\n]+ { werror (W_PRE_PROC_WARNING, yytext); count (); }
+"\r\n"         { count (); }
+"\n"           { count (); }
+[ \t\v\f]      { count (); }
 \\ {
-  int ch = input();
+  int ch = input ();
 
   if (ch == '\n')
-    count_char(ch);
+    count_char (ch);
   else
     {
       /* that could have been removed by the preprocessor anyway */
       werror (W_STRAY_BACKSLASH, column);
-      unput(ch);
+      unput (ch);
     }
 }
-.              { count(); }
+.              { count (); }
 %%
 
 /* flex 2.5.31 undefines yytext_ptr, so we have to define it again */
@@ -320,7 +320,8 @@ deprecated_keyword (char *yytext)
   dbuf_destroy (&dbuf);
 }
 
-static int checkCurrFile (const char *s)
+static int
+checkCurrFile (const char *s)
 {
   int  lNum;
   char *tptr;
@@ -364,7 +365,7 @@ static int checkCurrFile (const char *s)
   if (fullSrcFileName &&
     strncmp(s, fullSrcFileName, strlen(fullSrcFileName)) == 0 && fullSrcFileName[strlen(fullSrcFileName) - 1] == '"')
     {
-      lexFilename = fullSrcFileName;
+      lexFilename = (char *) fullSrcFileName;
     }
   else
     {
@@ -387,7 +388,8 @@ static int checkCurrFile (const char *s)
   return 0;
 }
 
-static void count_char(int ch)
+static void
+count_char (int ch)
 {
   switch (ch)
     {
@@ -406,7 +408,8 @@ static void count_char(int ch)
     }
 }
 
-static void count(void)
+static void
+count (void)
 {
   const char *p;
 
@@ -414,7 +417,8 @@ static void count(void)
     count_char(*p);
 }
 
-static int check_type(void)
+static int
+check_type (void)
 {
   symbol *sym = findSym(SymbolTab, NULL, yytext);
 
@@ -433,7 +437,8 @@ static int check_type(void)
  * to support ANSI hex and octal escape sequences in string literals
  */
 
-static const char *stringLiteral(void)
+static const char
+*stringLiteral (void)
 {
 #define STR_BUF_CHUNCK_LEN  1024
   int ch;
@@ -575,11 +580,13 @@ out:
 enum {
    P_SAVE = 1,
    P_RESTORE,
+   P_INDUCTION,
    P_NOINDUCTION,
    P_NOINVARIANT,
-   P_INDUCTION,
    P_STACKAUTO,
    P_NOJTBOUND,
+   P_OVERLAY_,     /* I had a strange conflict with P_OVERLAY while */
+                   /* cross-compiling for MINGW32 with gcc 3.2 */
    P_NOOVERLAY,
    P_LESSPEDANTIC,
    P_NOGCSE,
@@ -587,8 +594,6 @@ enum {
    P_EXCLUDE,
    P_NOIV,
    P_LOOPREV,
-   P_OVERLAY_,     /* I had a strange conflict with P_OVERLAY while */
-                   /* cross-compiling for MINGW32 with gcc 3.2 */
    P_DISABLEWARN,
    P_OPTCODESPEED,
    P_OPTCODESIZE,
@@ -614,7 +619,8 @@ STACK_DCL(SDCCERRG_stack, struct SDCCERRG *, SAVE_RESTORE_SIZE)
  * added to the options or optimize structure!
  */
 
-static struct options *cloneOptions(struct options *opt)
+static struct options *
+cloneOptions (struct options *opt)
 {
   struct options *new_opt;
 
@@ -632,7 +638,8 @@ static struct options *cloneOptions(struct options *opt)
   return new_opt;
 }
 
-static struct optimize *cloneOptimize(struct optimize *opt)
+static struct optimize *
+cloneOptimize (struct optimize *opt)
 {
   struct optimize *new_opt;
 
@@ -644,7 +651,8 @@ static struct optimize *cloneOptimize(struct optimize *opt)
   return new_opt;
 }
 
-static struct SDCCERRG *cloneSDCCERRG (struct SDCCERRG *val)
+static struct SDCCERRG *
+cloneSDCCERRG (struct SDCCERRG *val)
 {
   struct SDCCERRG *new_val;
 
@@ -656,7 +664,8 @@ static struct SDCCERRG *cloneSDCCERRG (struct SDCCERRG *val)
   return new_val;
 }
 
-static void copyAndFreeOptions(struct options *dest, struct options *src)
+static void
+copyAndFreeOptions (struct options *dest, struct options *src)
 {
   /* delete dest sets */
   deleteSet(&dest->calleeSavesSet);
@@ -670,7 +679,8 @@ static void copyAndFreeOptions(struct options *dest, struct options *src)
   Safe_free(src);
 }
 
-static void copyAndFreeOptimize(struct optimize *dest, struct optimize *src)
+static void
+copyAndFreeOptimize (struct optimize *dest, struct optimize *src)
 {
   /* copy src to dest */
   *dest = *src;
@@ -678,7 +688,8 @@ static void copyAndFreeOptimize(struct optimize *dest, struct optimize *src)
   Safe_free(src);
 }
 
-static void copyAndFreeSDCCERRG(struct SDCCERRG *dest, struct SDCCERRG *src)
+static void
+copyAndFreeSDCCERRG (struct SDCCERRG *dest, struct SDCCERRG *src)
 {
   /* copy src to dest */
   *dest = *src;
@@ -689,7 +700,8 @@ static void copyAndFreeSDCCERRG(struct SDCCERRG *dest, struct SDCCERRG *src)
 /*
  * returns 1 if the pragma was processed, 0 if not
  */
-static int doPragma(int id, const char *name, const char *cp)
+static int
+doPragma (int id, const char *name, const char *cp)
 {
   struct pragma_token_s token;
   int err = 0;
@@ -738,6 +750,7 @@ static int doPragma(int id, const char *name, const char *cp)
       }
       break;
 
+    case P_INDUCTION:
     case P_NOINDUCTION:
       cp = get_pragma_token(cp, &token);
       if (TOKEN_EOL != token.type)
@@ -746,7 +759,7 @@ static int doPragma(int id, const char *name, const char *cp)
           break;
         }
 
-      optimize.loopInduction = 0;
+      optimize.loopInduction = (id == P_INDUCTION) ? 1 : 0;
       break;
 
     case P_NOINVARIANT:
@@ -758,17 +771,6 @@ static int doPragma(int id, const char *name, const char *cp)
         }
 
       optimize.loopInvariant = 0;
-      break;
-
-    case P_INDUCTION:
-      cp = get_pragma_token(cp, &token);
-      if (TOKEN_EOL != token.type)
-        {
-          err = 1;
-          break;
-        }
-
-      optimize.loopInduction = 1;
       break;
 
     case P_STACKAUTO:
@@ -803,6 +805,16 @@ static int doPragma(int id, const char *name, const char *cp)
 
       optimize.global_cse = 0;
       break;
+
+    case P_OVERLAY_:
+      cp = get_pragma_token(cp, &token);
+      if (TOKEN_EOL != token.type)
+        {
+          err = 1;
+          break;
+        }
+
+      break; /* notyet */
 
     case P_NOOVERLAY:
       cp = get_pragma_token(cp, &token);
@@ -863,16 +875,6 @@ static int doPragma(int id, const char *name, const char *cp)
 
       optimize.noLoopReverse = 1;
       break;
-
-    case P_OVERLAY_:
-      cp = get_pragma_token(cp, &token);
-      if (TOKEN_EOL != token.type)
-        {
-          err = 1;
-          break;
-        }
-
-      break; /* notyet */
 
     case P_DISABLEWARN:
       {
@@ -1027,39 +1029,39 @@ static int doPragma(int id, const char *name, const char *cp)
 }
 
 static struct pragma_s pragma_tbl[] = {
-  { "save",           P_SAVE,         0, doPragma },
-  { "restore",        P_RESTORE,      0, doPragma },
-  { "noinduction",    P_NOINDUCTION,  0, doPragma },
-  { "noinvariant",    P_NOINVARIANT,  0, doPragma },
-  { "noloopreverse",  P_LOOPREV,      0, doPragma },
-  { "induction",      P_INDUCTION,    0, doPragma },
-  { "stackauto",      P_STACKAUTO,    0, doPragma },
-  { "nojtbound",      P_NOJTBOUND,    0, doPragma },
-  { "nogcse",         P_NOGCSE,       0, doPragma },
-  { "nooverlay",      P_NOOVERLAY,    0, doPragma },
-  { "callee_saves",   P_CALLEE_SAVES, 0, doPragma },
-  { "exclude",        P_EXCLUDE,      0, doPragma },
-  { "noiv",           P_NOIV,         0, doPragma },
-  { "overlay",        P_OVERLAY_,     0, doPragma },
-  { "less_pedantic",  P_LESSPEDANTIC, 0, doPragma },
-  { "disable_warning",P_DISABLEWARN,  0, doPragma },
-  { "opt_code_speed", P_OPTCODESPEED, 0, doPragma },
-  { "opt_code_size",  P_OPTCODESIZE,  0, doPragma },
+  { "save",              P_SAVE,            0, doPragma },
+  { "restore",           P_RESTORE,         0, doPragma },
+  { "induction",         P_INDUCTION,       0, doPragma },
+  { "noinduction",       P_NOINDUCTION,     0, doPragma },
+  { "noinvariant",       P_NOINVARIANT,     0, doPragma },
+  { "noloopreverse",     P_LOOPREV,         0, doPragma },
+  { "stackauto",         P_STACKAUTO,       0, doPragma },
+  { "nojtbound",         P_NOJTBOUND,       0, doPragma },
+  { "nogcse",            P_NOGCSE,          0, doPragma },
+  { "overlay",           P_OVERLAY_,        0, doPragma },
+  { "nooverlay",         P_NOOVERLAY,       0, doPragma },
+  { "callee_saves",      P_CALLEE_SAVES,    0, doPragma },
+  { "exclude",           P_EXCLUDE,         0, doPragma },
+  { "noiv",              P_NOIV,            0, doPragma },
+  { "less_pedantic",     P_LESSPEDANTIC,    0, doPragma },
+  { "disable_warning",   P_DISABLEWARN,     0, doPragma },
+  { "opt_code_speed",    P_OPTCODESPEED,    0, doPragma },
+  { "opt_code_size",     P_OPTCODESIZE,     0, doPragma },
   { "opt_code_balanced", P_OPTCODEBALANCED, 0, doPragma },
-  { "std_c89",        P_STD_C89,      0, doPragma },
-  { "std_c99",        P_STD_C99,      0, doPragma },
-  { "std_sdcc89",     P_STD_SDCC89,   0, doPragma },
-  { "std_sdcc99",     P_STD_SDCC99,   0, doPragma },
-  { "codeseg",        P_CODESEG,      0, doPragma },
-  { "constseg",       P_CONSTSEG,     0, doPragma },
-  { NULL,             0,              0, NULL },
+  { "std_c89",           P_STD_C89,         0, doPragma },
+  { "std_c99",           P_STD_C99,         0, doPragma },
+  { "std_sdcc89",        P_STD_SDCC89,      0, doPragma },
+  { "std_sdcc99",        P_STD_SDCC99,      0, doPragma },
+  { "codeseg",           P_CODESEG,         0, doPragma },
+  { "constseg",          P_CONSTSEG,        0, doPragma },
+  { NULL,                0,                 0, NULL },
 };
 
 /*
  * returns 1 if the pragma was processed, 0 if not
  */
 int
-process_pragma_tbl(const struct pragma_s *pragma_tbl, const char *s)
+process_pragma_tbl (const struct pragma_s *pragma_tbl, const char *s)
 {
   struct pragma_token_s token;
   int i;
@@ -1090,7 +1092,8 @@ process_pragma_tbl(const struct pragma_s *pragma_tbl, const char *s)
   return ret;
 }
 
-static int process_pragma(const char *s)
+static int
+process_pragma (const char *s)
 {
   struct pragma_token_s token;
 
@@ -1099,7 +1102,7 @@ static int process_pragma(const char *s)
   s = get_pragma_token(s, &token);
   if (0 != strcmp("#pragma", get_pragma_string(&token)))
     {
-      /* Oops, womething went totally wrong - internal error */
+      /* Oops, something went totally wrong - internal error */
       wassertl(0, "pragma parser internal error");
     }
 
@@ -1124,7 +1127,8 @@ static int process_pragma(const char *s)
 
 /* will return 1 if the string is a part
    of a target specific keyword */
-static int isTargetKeyword(const char *s)
+static int
+isTargetKeyword (const char *s)
 {
   int i;
 
@@ -1156,7 +1160,8 @@ static int isTargetKeyword(const char *s)
   return 0;
 }
 
-int yywrap(void)
+int
+yywrap (void)
 {
   if (!STACK_EMPTY(options_stack) || !STACK_EMPTY(optimize_stack))
     werror(W_SAVE_RESTORE);
@@ -1164,7 +1169,8 @@ int yywrap(void)
   return 1;
 }
 
-int yyerror(char *s)
+int
+yyerror (char *s)
 {
   fflush(stdout);
 

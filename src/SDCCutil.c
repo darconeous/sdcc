@@ -45,7 +45,7 @@
     containing all of the pairs.
 */
 hTab *
-populateStringHash(const char **pin)
+populateStringHash (const char **pin)
 {
   hTab *pret = NULL;
 
@@ -58,42 +58,130 @@ populateStringHash(const char **pin)
   return pret;
 }
 
+
+/** shell escape string
+    returns dynamically allocated string, which should be free-ed
+*/
+char *
+shell_escape (const char *str)
+{
+#ifdef _WIN32
+  struct dbuf_s dbuf;
+  bool in_quote = FALSE;
+
+  dbuf_init (&dbuf, 128);
+
+  while (*str)
+    {
+      switch (*str)
+        {
+        case '\\':
+        case '"':
+          if (in_quote)
+            {
+              dbuf_append_char (&dbuf, '"');
+              in_quote = FALSE;
+            }
+          dbuf_append_char (&dbuf, '\\');
+          dbuf_append_char (&dbuf, *str);
+          break;
+
+        case ' ':
+        case '%':
+          if (!in_quote)
+            {
+              dbuf_append_char (&dbuf, '"');
+              in_quote = TRUE;
+            }
+          dbuf_append_char (&dbuf, *str);
+          break;
+
+        default:
+          if (in_quote)
+            {
+              dbuf_append_char (&dbuf, '"');
+              in_quote = FALSE;
+            }
+          dbuf_append_char (&dbuf, *str);
+        }
+
+      ++str;
+    }
+
+  if (in_quote)
+    dbuf_append_char (&dbuf, '"');
+
+  return dbuf_detach_c_str (&dbuf);
+#else
+  struct dbuf_s dbuf;
+
+  dbuf_init (&dbuf, 128);
+
+  while (*str)
+    {
+      if (strchr ("\\\"'$ ", *str))
+        dbuf_append_char (&dbuf, '\\');
+      dbuf_append_char (&dbuf, *str);
+      ++str;
+    }
+
+  return dbuf_detach_c_str (&dbuf);
+#endif
+}
+
 /** Prints elements of the set to the file, each element on new line
 */
 void
-fputStrSet(FILE *fp, set *list)
+fputStrSet (FILE * fp, set * list)
 {
   const char *s;
 
-  for (s = setFirstItem(list); s != NULL; s = setNextItem(list)) {
-    fputs(s, fp);
-    fputc('\n', fp);
-  }
+  for (s = setFirstItem (list); s != NULL; s = setNextItem (list))
+    {
+      fputs (s, fp);
+      fputc ('\n', fp);
+    }
 }
 
 /** Prepend / append given strings to each item of string set. The result is in a
     new string set.
 */
 set *
-appendStrSet(set *list, const char *pre, const char *post)
+appendStrSet (set * list, const char *pre, const char *post)
 {
   set *new_list = NULL;
   const char *item;
   struct dbuf_s dbuf;
 
-  for (item = setFirstItem(list); item != NULL; item = setNextItem(list)) {
-    dbuf_init(&dbuf, PATH_MAX);
+  for (item = setFirstItem (list); item != NULL; item = setNextItem (list))
+    {
+      dbuf_init (&dbuf, PATH_MAX);
 
-    if (pre != NULL)
-      dbuf_append_str(&dbuf, pre);
-    dbuf_append_str(&dbuf, item);
-    if (post != NULL)
-      dbuf_append_str(&dbuf, post);
+      if (pre != NULL)
+        dbuf_append_str (&dbuf, pre);
+      dbuf_append_str (&dbuf, item);
+      if (post != NULL)
+        dbuf_append_str (&dbuf, post);
 
-    /* null terminate the buffer */
-    dbuf_c_str(&dbuf);
-    addSet(&new_list, dbuf_detach(&dbuf));
-  }
+      addSet (&new_list, dbuf_detach_c_str (&dbuf));
+    }
+
+  return new_list;
+}
+
+/** shell escape each item of string set. The result is in a
+    new string set.
+*/
+set *
+shellEscapeStrSet (set * list)
+{
+  set *new_list = NULL;
+  const char *item;
+
+  for (item = setFirstItem (list); item != NULL; item = setNextItem (list))
+    {
+      addSet (&new_list, shell_escape (item));
+    }
 
   return new_list;
 }
@@ -102,35 +190,33 @@ appendStrSet(set *list, const char *pre, const char *post)
     by spaces. The returned string is on the heap.
 */
 const char *
-joinStrSet(set *list)
+joinStrSet (set * list)
 {
   const char *s;
   struct dbuf_s dbuf;
 
-  dbuf_init(&dbuf, PATH_MAX);
+  dbuf_init (&dbuf, PATH_MAX);
 
-  for (s = setFirstItem(list); s != NULL; s = setNextItem(list))
+  for (s = setFirstItem (list); s != NULL; s = setNextItem (list))
     {
-      dbuf_append_str(&dbuf, s);
-      dbuf_append_char(&dbuf, ' ');
+      dbuf_append_str (&dbuf, s);
+      dbuf_append_char (&dbuf, ' ');
     }
 
-  s = dbuf_c_str(&dbuf);
-  dbuf_detach(&dbuf);
-  return s;
+  return dbuf_detach_c_str (&dbuf);
 }
 
 /** Split the path string to the directory and file name (including extension) components.
     The directory component doesn't contain trailing directory separator.
     Returns true if the path contains the directory separator. */
 int
-dbuf_splitPath(const char *path, struct dbuf_s *dir, struct dbuf_s *file)
+dbuf_splitPath (const char *path, struct dbuf_s *dir, struct dbuf_s *file)
 {
   const char *p;
   int ret;
-  const char *end = &path[strlen(path)];
+  const char *end = &path[strlen (path)];
 
-  for (p = end - 1; p >= path && !IS_DIR_SEPARATOR(*p); --p)
+  for (p = end - 1; p >= path && !IS_DIR_SEPARATOR (*p); --p)
     ;
 
   ret = p >= path;
@@ -140,7 +226,7 @@ dbuf_splitPath(const char *path, struct dbuf_s *dir, struct dbuf_s *file)
       int len = p - path;
 
       if (0 < len)
-        dbuf_append(dir, path, len);
+        dbuf_append (dir, path, len);
     }
 
   if (NULL != file)
@@ -151,7 +237,7 @@ dbuf_splitPath(const char *path, struct dbuf_s *dir, struct dbuf_s *file)
       len = end - p;
 
       if (0 < len)
-        dbuf_append(file, p, len);
+        dbuf_append (file, p, len);
     }
 
   return ret;
@@ -161,17 +247,17 @@ dbuf_splitPath(const char *path, struct dbuf_s *dir, struct dbuf_s *file)
     File extension component contains the extension separator.
     Returns true if the path contains the extension separator. */
 int
-dbuf_splitFile(const char *path, struct dbuf_s *file, struct dbuf_s *ext)
+dbuf_splitFile (const char *path, struct dbuf_s *file, struct dbuf_s *ext)
 {
   const char *p;
-  const char *end = &path[strlen(path)];
+  const char *end = &path[strlen (path)];
 
-  for (p = end - 1; p >= path && !IS_DIR_SEPARATOR(*p) && '.' != *p; --p)
+  for (p = end - 1; p >= path && !IS_DIR_SEPARATOR (*p) && '.' != *p; --p)
     ;
 
   if (p < path || '.' != *p)
     {
-      dbuf_append_str(file, path);
+      dbuf_append_str (file, path);
 
       return 0;
     }
@@ -182,7 +268,7 @@ dbuf_splitFile(const char *path, struct dbuf_s *file, struct dbuf_s *ext)
           int len = p - path;
 
           if (0 < len)
-            dbuf_append(file, path, len);
+            dbuf_append (file, path, len);
         }
 
       if (NULL != ext)
@@ -190,7 +276,7 @@ dbuf_splitFile(const char *path, struct dbuf_s *file, struct dbuf_s *ext)
           int len = end - p;
 
           if (0 < len)
-            dbuf_append(ext, p, len);
+            dbuf_append (ext, p, len);
         }
 
       return 1;
@@ -200,15 +286,15 @@ dbuf_splitFile(const char *path, struct dbuf_s *file, struct dbuf_s *ext)
 /** Combine directory and the file name to a path string using the DIR_SEPARATOR_CHAR.
  */
 void
-dbuf_makePath(struct dbuf_s *path,const char *dir, const char *file)
+dbuf_makePath (struct dbuf_s *path, const char *dir, const char *file)
 {
   if (dir != NULL)
-    dbuf_append_str(path, dir);
-  
-  dbuf_append_char(path, DIR_SEPARATOR_CHAR);
+    dbuf_append_str (path, dir);
+
+  dbuf_append_char (path, DIR_SEPARATOR_CHAR);
 
   if (file != NULL)
-    dbuf_append_str(path, file);
+    dbuf_append_str (path, file);
 }
 
 /** Given a file with path information in the binary files directory,
@@ -218,31 +304,30 @@ dbuf_makePath(struct dbuf_s *path,const char *dir, const char *file)
 */
 #ifdef _WIN32
 const char *
-getBinPath(const char *prel)
+getBinPath (const char *prel)
 {
   struct dbuf_s path;
   const char *p;
 
-  dbuf_init(&path, 128);
-  dbuf_splitPath(prel, &path, NULL);
+  dbuf_init (&path, 128);
+  dbuf_splitPath (prel, &path, NULL);
 
-  p = dbuf_c_str(&path);
+  p = dbuf_c_str (&path);
   if ('\0' != *p)
     return p;
   else
     {
       char module[PATH_MAX];
 
-      dbuf_destroy(&path);
+      dbuf_destroy (&path);
 
       /* not enough info in prel; do it with module name */
-      if (0 != GetModuleFileName(NULL, module, sizeof (module)))
+      if (0 != GetModuleFileName (NULL, module, sizeof (module)))
         {
-          dbuf_init(&path, 128);
+          dbuf_init (&path, 128);
 
-          dbuf_splitPath(module, &path, NULL);
-          dbuf_c_str(&path);
-          return dbuf_detach(&path);
+          dbuf_splitPath (module, &path, NULL);
+          return dbuf_detach_c_str (&path);
         }
       else
         return NULL;
@@ -250,20 +335,19 @@ getBinPath(const char *prel)
 }
 #else
 const char *
-getBinPath(const char *prel)
+getBinPath (const char *prel)
 {
   const char *ret_path;
 
-  if (NULL != (ret_path = findProgramPath(prel)))
+  if (NULL != (ret_path = findProgramPath (prel)))
     {
       struct dbuf_s path;
 
-      dbuf_init(&path, 128);
+      dbuf_init (&path, 128);
 
-      dbuf_splitPath(ret_path, &path, NULL);
-      free((void *)ret_path);
-      dbuf_c_str(&path);
-      return dbuf_detach(&path);
+      dbuf_splitPath (ret_path, &path, NULL);
+      free ((void *) ret_path);
+      return dbuf_detach_c_str (&path);
     }
   else
     return NULL;
@@ -285,34 +369,138 @@ static hTab *_mainValues;
 void
 setMainValue (const char *pname, const char *pvalue)
 {
-  assert(pname);
+  assert (pname);
 
   shash_add (&_mainValues, pname, pvalue);
 }
 
-void
-buildCmdLine2 (char *pbuffer, size_t len, const char *pcmd, ...)
+char *
+buildMacros (const char *cmd)
+{
+  return eval_macros (_mainValues, cmd);
+}
+
+char *
+buildCmdLine (const char **cmds, const char *p1, const char *p2, const char *p3, set * list)
+{
+  int first = 1;
+  struct dbuf_s dbuf;
+
+  assert (cmds != NULL);
+
+  dbuf_init (&dbuf, 256);
+
+  while (*cmds)
+    {
+      const char *p, *from, *par;
+      int sep = 1;
+
+      from = *cmds;
+      cmds++;
+
+      /* See if it has a '$' anywhere - if not, just copy */
+      if ((p = strchr (from, '$')))
+        {
+          /* include first part of cmd */
+          if (p != from)
+            {
+              if (!first && sep)
+                dbuf_append_char (&dbuf, ' ');
+              dbuf_append (&dbuf, from, p - from);
+              sep = 0;
+            }
+          from = p + 2;
+
+          /* include parameter */
+          p++;
+          switch (*p)
+            {
+            case '1':
+              par = p1;
+              break;
+
+            case '2':
+              par = p2;
+              break;
+
+            case '3':
+              par = p3;
+              break;
+
+            case 'l':
+              {
+                const char *tmp;
+                par = NULL;
+
+                if (list != NULL && (tmp = (const char *) setFirstItem (list)) != NULL)
+                  {
+                    do
+                      {
+                        if (*tmp != '\0')
+                          {
+                            if (sep)
+                              dbuf_append_char (&dbuf, ' ');    /* seperate it */
+                            dbuf_append_str (&dbuf, tmp);
+                            tmp++;
+                            sep = 1;
+                          }
+                      }
+                    while ((tmp = (const char *) setNextItem (list)) != NULL);
+                  }
+              }
+              break;
+
+            default:
+              par = NULL;
+              assert (0);
+            }
+
+          if (par && *par != '\0')
+            {
+              if (!first && sep)
+                dbuf_append_char (&dbuf, ' ');  /* seperate it */
+              dbuf_append_str (&dbuf, par);
+              sep = 0;
+            }
+        }
+
+      /* include the rest of cmd, e.g. ".asm" from "$1.asm" */
+      if (*from != '\0')
+        {
+          if (!first && sep)
+            dbuf_append_char (&dbuf, ' ');      /* seperate it */
+          dbuf_append_str (&dbuf, from);
+          sep = 0;
+        }
+
+      first = 0;
+    }
+
+  return dbuf_detach_c_str (&dbuf);
+}
+
+char *
+buildCmdLine2 (const char *pcmd, ...)
 {
   va_list ap;
   char *poutcmd;
 
-  assert(pbuffer && pcmd);
-  assert(_mainValues);
+  assert (pcmd);
+  assert (_mainValues);
 
-  va_start(ap, pcmd);
+  va_start (ap, pcmd);
 
-  poutcmd = mvsprintf(_mainValues, pcmd, ap);
+  poutcmd = mvsprintf (_mainValues, pcmd, ap);
 
-  va_end(ap);
+  va_end (ap);
 
-  strncpyz(pbuffer, poutcmd, len);
-  Safe_free(poutcmd);
+  return poutcmd;
 }
 
 void
 populateMainValues (const char **ppin)
 {
-  _mainValues = populateStringHash(ppin);
+  _mainValues = populateStringHash (ppin);
 }
 
 /** Returns true if sz starts with the string given in key.
@@ -335,58 +523,60 @@ chomp (char *sz)
 }
 
 hTab *
-getRuntimeVariables(void)
+getRuntimeVariables (void)
 {
   return _mainValues;
 }
 
-
 /* strncpy() with guaranteed NULL termination. */
-char *strncpyz(char *dest, const char *src, size_t n)
+char *
+strncpyz (char *dest, const char *src, size_t n)
 {
-    assert(n > 0);
+  assert (n > 0);
 
-    --n;
-    /* paranoia... */
-    if (strlen(src) > n)
+  --n;
+  /* paranoia... */
+  if (strlen (src) > n)
     {
-	fprintf(stderr, "strncpyz prevented buffer overrun!\n");
+      fprintf (stderr, "strncpyz prevented buffer overrun!\n");
     }
-    
-    strncpy(dest, src, n);
-    dest[n] = 0;
-    return dest;
+
+  strncpy (dest, src, n);
+  dest[n] = 0;
+  return dest;
 }
 
 /* like strncat() with guaranteed NULL termination
  * The passed size should be the size of the dest buffer, not the number of 
  * bytes to copy.
  */
-char *strncatz(char *dest, const char *src, size_t n)
+char *
+strncatz (char *dest, const char *src, size_t n)
 {
-    size_t maxToCopy;
-    size_t destLen = strlen(dest);
-    
-    assert(n > 0);
-    assert(n > destLen);
-    
-    maxToCopy = n - destLen - 1;
-    
-    /* paranoia... */
-    if (strlen(src) + destLen >= n)
+  size_t maxToCopy;
+  size_t destLen = strlen (dest);
+
+  assert (n > 0);
+  assert (n > destLen);
+
+  maxToCopy = n - destLen - 1;
+
+  /* paranoia... */
+  if (strlen (src) + destLen >= n)
     {
-        fprintf(stderr, "strncatz prevented buffer overrun!\n");
+      fprintf (stderr, "strncatz prevented buffer overrun!\n");
     }
-    
-    strncat(dest, src, maxToCopy);
-    dest[n - 1] = 0;
-    return dest;
+
+  strncat (dest, src, maxToCopy);
+  dest[n - 1] = 0;
+  return dest;
 }
 
 /*-----------------------------------------------------------------*/
 /* getBuildNumber - return build number                            */
 /*-----------------------------------------------------------------*/
-const char *getBuildNumber(void)
+const char *
+getBuildNumber (void)
 {
   return (SDCC_BUILD_NUMBER);
 }
@@ -394,15 +584,17 @@ const char *getBuildNumber(void)
 /*-----------------------------------------------------------------*/
 /* getBuildDate - return build date                                */
 /*-----------------------------------------------------------------*/
-const char *getBuildDate(void)
+const char *
+getBuildDate (void)
 {
-  return (__DATE__);
+  return __DATE__;
 }
 
 /*-----------------------------------------------------------------*/
 /* getBuildEnvironment - return environment used to build SDCC     */
 /*-----------------------------------------------------------------*/
-const char *getBuildEnvironment(void)
+const char *
+getBuildEnvironment (void)
 {
 #ifdef __CYGWIN__
   return "CYGWIN";
@@ -415,9 +607,11 @@ const char *getBuildEnvironment(void)
 #elif defined(__BORLANDC__)
   return "BORLANDC";
 #elif defined(__APPLE__)
-# if defined(__i386__)
+#if defined(__i386__)
   return "Mac OS X i386";
-# else
+#elif defined(__x86_64__)
+  return "Mac OS X x86_64";
+#else
   return "Mac OS X ppc";
 #endif
 #elif defined(__linux__)
@@ -429,42 +623,44 @@ const char *getBuildEnvironment(void)
 #elif defined(__OpenBSD__)
   return "OpenBSD";
 #elif defined(__sun)
-# if defined(__i386)
+#if defined(__i386)
   return "Solaris i386";
-# elif defined(__amd64)
+#elif defined(__amd64)
   return "Solaris amd64";
-# else
+#else
   return "Solaris SPARC";
-# endif
+#endif
 #else
   return "UNIX";
 #endif
 }
 
 #if defined(HAVE_VSNPRINTF) || defined(HAVE_VSPRINTF)
-size_t SDCCsnprintf(char *dst, size_t n, const char *fmt, ...)
+size_t
+SDCCsnprintf (char *dst, size_t n, const char *fmt, ...)
 {
   va_list args;
   int len;
 
-  va_start(args, fmt);
+  va_start (args, fmt);
 
-# if defined(HAVE_VSNPRINTF)
-  len = vsnprintf(dst, n, fmt, args);
-# else
-  vsprintf(dst, fmt, args);
-  len = strlen(dst) + 1;
-# endif
+#if defined(HAVE_VSNPRINTF)
+  len = vsnprintf (dst, n, fmt, args);
+#else
+  vsprintf (dst, fmt, args);
+  len = strlen (dst) + 1;
+#endif
 
-  va_end(args);
+  va_end (args);
 
   /* on some gnu systems, vsnprintf returns -1 if output is truncated.
    * In the C99 spec, vsnprintf returns the number of characters that 
    * would have been written, were space available.
    */
-  if ((len < 0) || (size_t) len >= n) {
-    fprintf(stderr, "internal error: sprintf truncated.\n");
-  }
+  if ((len < 0) || (size_t) len >= n)
+    {
+      fprintf (stderr, "internal error: sprintf truncated.\n");
+    }
 
   return len;
 }
@@ -473,19 +669,19 @@ size_t SDCCsnprintf(char *dst, size_t n, const char *fmt, ...)
 /** Pragma tokenizer
  */
 void
-init_pragma_token(struct pragma_token_s *token)
+init_pragma_token (struct pragma_token_s *token)
 {
-  dbuf_init(&token->dbuf, 16);
+  dbuf_init (&token->dbuf, 16);
   token->type = TOKEN_UNKNOWN;
 }
 
 char *
-get_pragma_token(const char *s, struct pragma_token_s *token)
+get_pragma_token (const char *s, struct pragma_token_s *token)
 {
-  dbuf_set_length(&token->dbuf, 0);
+  dbuf_set_length (&token->dbuf, 0);
 
   /* skip leading spaces */
-  while ('\n' != *s && isspace(*s))
+  while ('\n' != *s && isspace (*s))
     ++s;
 
   if ('\0' == *s || '\n' == *s)
@@ -496,20 +692,20 @@ get_pragma_token(const char *s, struct pragma_token_s *token)
     {
       char *end;
 
-      long val = strtol(s, &end, 0);
+      long val = strtol (s, &end, 0);
 
-      if (end != s && ('\0' == *end || isspace(*end)))
+      if (end != s && ('\0' == *end || isspace (*end)))
         {
           token->val.int_val = val;
           token->type = TOKEN_INT;
-          dbuf_append(&token->dbuf, s, end - s);
+          dbuf_append (&token->dbuf, s, end - s);
           s = end;
         }
       else
         {
-          while ('\0' != *s && !isspace(*s))
+          while ('\0' != *s && !isspace (*s))
             {
-              dbuf_append_char(&token->dbuf, *s);
+              dbuf_append_char (&token->dbuf, *s);
               ++s;
             }
 
@@ -517,19 +713,19 @@ get_pragma_token(const char *s, struct pragma_token_s *token)
         }
     }
 
-  return (char *)s;
+  return (char *) s;
 }
 
 const char *
-get_pragma_string(struct pragma_token_s *token)
+get_pragma_string (struct pragma_token_s *token)
 {
-  return dbuf_c_str(&token->dbuf);
+  return dbuf_c_str (&token->dbuf);
 }
 
 void
-free_pragma_token(struct pragma_token_s *token)
+free_pragma_token (struct pragma_token_s *token)
 {
-  dbuf_destroy(&token->dbuf);
+  dbuf_destroy (&token->dbuf);
 }
 
 /*! /fn char hexEscape(char **src)
@@ -540,28 +736,28 @@ free_pragma_token(struct pragma_token_s *token)
 unsigned char
 hexEscape (const char **src)
 {
-  char *s ;
-  unsigned long value ;
+  char *s;
+  unsigned long value;
 
-  (*src)++ ;    /* Skip over the 'x' */
+  ++*src;                       /* Skip over the 'x' */
 
   value = strtol (*src, &s, 16);
 
   if (s == *src)
     {
-      // no valid hex found
-      werror(E_INVALID_HEX);
+      /* no valid hex found */
+      werror (E_INVALID_HEX);
     }
   else
     {
       if (value > 255)
         {
-          werror(W_ESC_SEQ_OOR_FOR_CHAR);
+          werror (W_ESC_SEQ_OOR_FOR_CHAR);
         }
     }
   *src = s;
 
-  return (char) value;
+  return (unsigned char) value;
 }
 
 /*------------------------------------------------------------------*/
@@ -574,14 +770,14 @@ unsigned char
 octalEscape (const char **str)
 {
   int digits;
-  unsigned value=0;
+  unsigned value = 0;
 
-  for (digits = 0; digits < 3; digits++)
+  for (digits = 0; digits < 3; ++digits)
     {
-      if (**str >='0' && **str <= '7')
+      if (**str >= '0' && **str <= '7')
         {
-          value = value*8 + (**str - '0');
-          (*str)++;
+          value = value * 8 + (**str - '0');
+          ++*str;
         }
       else
         {
@@ -613,15 +809,15 @@ octalEscape (const char **str)
 int
 copyStr (char *dest, const char *src)
 {
-  char *OriginalDest = dest ;
+  char *OriginalDest = dest;
 
   while (*src)
     {
       if (*src == '\"')
-        src++;
+        ++src;
       else if (*src == '\\')
         {
-          src++;
+          ++src;
           switch (*src)
             {
             case 'n':
@@ -654,14 +850,14 @@ copyStr (char *dest, const char *src)
             case '5':
             case '6':
             case '7':
-              *dest++ = octalEscape(&src);
-              src-- ;
+              *dest++ = octalEscape (&src);
+              --src;
               break;
 
             case 'x':
-              *dest++ = hexEscape(&src) ;
-              src-- ;
-              break ;
+              *dest++ = hexEscape (&src);
+              --src;
+              break;
 
             case '\\':
               *dest++ = '\\';
@@ -678,7 +874,7 @@ copyStr (char *dest, const char *src)
             default:
               *dest++ = *src;
             }
-          src++;
+          ++src;
         }
       else
         *dest++ = *src++;
@@ -686,5 +882,5 @@ copyStr (char *dest, const char *src)
 
   *dest++ = '\0';
 
-  return dest - OriginalDest ;
+  return dest - OriginalDest;
 }

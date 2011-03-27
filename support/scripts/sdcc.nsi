@@ -1,6 +1,6 @@
 # sdcc.nsi - NSIS installer script for SDCC
 #
-# Copyright (c) 2003-2010 Borut Razem
+# Copyright (c) 2003-2011 Borut Razem
 #
 # This file is part of sdcc.
 #
@@ -34,7 +34,8 @@
 #   rename it to COPYING.txt and COPYING3.txt and convert it to DOS format:
 #   unix2dos COPYING.txt
 #   unix2dos COPYING3.txt
-# - copy readline5.dll to PKGDIR/bin/readline5.dll
+#   unix2dos doc/ChangeLog_head.txt
+#   unix2dos doc/README.TXT
 # - run NSIS installer from PKGDIR directory:
 #   "c:\Program Files\NSIS\makensis.exe" -DVER_MAJOR=<SDCC_VER_MAJOR> -DVER_MINOR=<SDCC_VER_MINOR> -DVER_REVISION=<SDCC_VER_DEVEL> -DVER_BUILD=<SDCC_REVISION> sdcc.nsi
 #   replace <VER_XXX> with the appropriate values, for example for SDCC 2.7.4:
@@ -60,20 +61,18 @@
 #   rename it to COPYING.txt and COPYING3.txt and convert it to DOS format:
 #   unix2dos COPYING.txt
 #   unix2dos COPYING3.txt
-# - copy readline5.dll to PKGDIR/bin/readline5.dll
+#   unix2dos doc/ChangeLog.txt
+#   unix2dos doc/README.TXT
 # - run NSIS installer from PKGDIR directory:
 #   "c:\Program Files\NSIS\makensis.exe" -DFULL_DOC -DVER_MAJOR=<VER_MAJOR> -DVER_MINOR=<VER_MINOR> -DVER_REVISION=<VER_PATCH> -DVER_BUILD=<REVISION> sdcc.nsi
+#   replace <VER_XXX> with the appropriate values, for example for SDCC 3.0.0:
+#   <SDCC_VER_MAJOR> = 3
+#   <SDCC_VER_MINOR> = 0
+#   <SDCC_VER_DEVEL> = 0
+#   replace <SDCC_REVISION> with the current svn revision number
 # - A setup file setup.exe is created in PKGDIR directory.
 #   Rename it to sdcc-x.x.x-setup.exe and upload it
 #   to sdcc download repository at sourceforge.net
-#
-# How to upload secc setup.exe tosourceforge.net
-#
-# Execute following commands from the cmd prompt:
-# - sftp sdcc.sourceforge.net
-# - cd /home/groups/s/sd/sdcc/htdocs/snapshots/i586-mingw32msvc-setup
-# - put sdcc_yyyymmdd_setup.exe
-# - quit
 #
 # For debugging define -DSDCC.DEBUG command line option
 
@@ -171,13 +170,6 @@ SetCompressor /SOLID lzma
 
 !define DEV_ROOT "${SDCC_ROOT}"
 
-!ifdef FULL_DOC
-!system "unix2dos ${SDCC_ROOT}\doc\ChangeLog.txt" = 0
-!else
-!system "unix2dos ${SDCC_ROOT}\doc\ChangeLog_head.txt" = 0
-!endif
-!system "unix2dos ${SDCC_ROOT}\doc\README.TXT" = 0
-
 InstType "Full (Bin, ucSim, SDCDB, Doc, Lib, Src)"
 InstType "Medium (Bin, ucSim, SDCDB, Doc, Lib)"
 InstType "Compact (Bin, ucSim, SDCDB, Doc)"
@@ -195,6 +187,7 @@ InstType "Compact (Bin, ucSim, SDCDB, Doc)"
 !include MUI2.nsh
 !include WordFunc.nsh
 !include StrFunc.nsh
+!include WinVer.nsh
 ${StrStr}
 ${UnStrStr}
 
@@ -415,27 +408,38 @@ ${Section} "SDCC include files" SEC05
   File "${DEV_ROOT}\include\asm\gbz80\features.h"
   SetOutPath "$INSTDIR\include\asm\mcs51"
   File "${DEV_ROOT}\include\asm\mcs51\features.h"
-  SetOutPath "$INSTDIR\include\asm\pic"
-  File "${DEV_ROOT}\include\asm\pic\features.h"
+  SetOutPath "$INSTDIR\include\asm\pic14"
+  File "${DEV_ROOT}\include\asm\pic14\features.h"
   SetOutPath "$INSTDIR\include\asm\pic16"
   File "${DEV_ROOT}\include\asm\pic16\features.h"
   SetOutPath "$INSTDIR\include\asm\z80"
   File "${DEV_ROOT}\include\asm\z80\features.h"
+
+  SetOutPath "$INSTDIR\include\ds390"
+  File "${DEV_ROOT}\include\ds390\*.h"
+  SetOutPath "$INSTDIR\include\ds400"
+  File "${DEV_ROOT}\include\ds400\*.h"
   SetOutPath "$INSTDIR\include\hc08"
   File "${DEV_ROOT}\include\hc08\*.h"
   SetOutPath "$INSTDIR\include\mcs51"
   File "${DEV_ROOT}\include\mcs51\*.h"
-  SetOutPath "$INSTDIR\include\pic"
-  File "${DEV_ROOT}\include\pic\*.h"
-  File "${DEV_ROOT}\include\pic\*.txt"
-  File "${DEV_ROOT}\include\pic\*.inc"
+  SetOutPath "$INSTDIR\include\pic14"
+  File "${DEV_ROOT}\include\pic14\*.h"
+  File "${DEV_ROOT}\include\pic14\*.txt"
+  File "${DEV_ROOT}\include\pic14\*.inc"
   SetOutPath "$INSTDIR\include\pic16"
   File "${DEV_ROOT}\include\pic16\*.h"
   File "${DEV_ROOT}\include\pic16\*.txt"
   SetOutPath "$INSTDIR\include\z80"
   File "${DEV_ROOT}\include\z80\*.h"
+
   SetOutPath "$INSTDIR\include"
   File "${DEV_ROOT}\include\*.h"
+
+  SetOutPath "$INSTDIR\non-free\include\pic14"
+  File "${DEV_ROOT}\non-free\include\pic14\*.h"
+  SetOutPath "$INSTDIR\non-free\include\pic16"
+  File "${DEV_ROOT}\non-free\include\pic16\*.h"
 ${SectionEnd}
 
 ${Section} "SDCC DS390 library" SEC06
@@ -497,12 +501,18 @@ ${Section} "SDCC PIC16 library" SEC15
   SetOutPath "$INSTDIR\lib\pic16"
   File "${DEV_ROOT}\lib\pic16\*.o"
   File "${DEV_ROOT}\lib\pic16\*.lib"
+
+  SetOutPath "$INSTDIR\non-free\lib\pic16"
+  File "${DEV_ROOT}\non-free\lib\pic16\*.lib"
 ${SectionEnd}
 
-${Section} "SDCC PIC library" SEC16
+${Section} "SDCC PIC14 library" SEC16
   SectionIn 1 2
-  SetOutPath "$INSTDIR\lib\pic"
-  File "${DEV_ROOT}\lib\pic\*.lib"
+  SetOutPath "$INSTDIR\lib\pic14"
+  File "${DEV_ROOT}\lib\pic14\*.lib"
+
+  SetOutPath "$INSTDIR\non-free\lib\pic14"
+  File "${DEV_ROOT}\non-free\lib\pic14\*.lib"
 ${SectionEnd}
 
 ${Section} "SDCC library sources" SEC17
@@ -543,33 +553,33 @@ ${Section} "SDCC library sources" SEC17
   SetOutPath "$INSTDIR\lib\src\large"
 #  File "${DEV_ROOT}\lib\src\large\Makefile"
 
-  SetOutPath "$INSTDIR\lib\src\pic"
-#  File "${DEV_ROOT}\lib\src\pic\configure"
-#  File "${DEV_ROOT}\lib\src\pic\configure.in"
-#  File "${DEV_ROOT}\lib\src\pic\GPL"
-#  File "${DEV_ROOT}\lib\src\pic\LGPL"
-#  File "${DEV_ROOT}\lib\src\pic\Makefile"
-#  File "${DEV_ROOT}\lib\src\pic\Makefile.common"
-#  File "${DEV_ROOT}\lib\src\pic\Makefile.common.in"
-#  File "${DEV_ROOT}\lib\src\pic\Makefile.rules"
-#  File "${DEV_ROOT}\lib\src\pic\Makefile.subdir"
-#  File "${DEV_ROOT}\lib\src\pic\NEWS"
-#  File "${DEV_ROOT}\lib\src\pic\README"
-  File "${DEV_ROOT}\lib\src\pic\TEMPLATE.c"
-  File "${DEV_ROOT}\lib\src\pic\TEMPLATE.S"
+  SetOutPath "$INSTDIR\lib\src\pic14"
+#  File "${DEV_ROOT}\lib\src\pic14\configure"
+#  File "${DEV_ROOT}\lib\src\pic14\configure.in"
+#  File "${DEV_ROOT}\lib\src\pic14\GPL"
+#  File "${DEV_ROOT}\lib\src\pic14\LGPL"
+#  File "${DEV_ROOT}\lib\src\pic14\Makefile"
+#  File "${DEV_ROOT}\lib\src\pic14\Makefile.common"
+#  File "${DEV_ROOT}\lib\src\pic14\Makefile.common.in"
+#  File "${DEV_ROOT}\lib\src\pic14\Makefile.rules"
+#  File "${DEV_ROOT}\lib\src\pic14\Makefile.subdir"
+#  File "${DEV_ROOT}\lib\src\pic14\NEWS"
+#  File "${DEV_ROOT}\lib\src\pic14\README"
+  File "${DEV_ROOT}\lib\src\pic14\TEMPLATE.c"
+  File "${DEV_ROOT}\lib\src\pic14\TEMPLATE.S"
 
-  SetOutPath "$INSTDIR\lib\src\pic\libsdcc"
-  File "${DEV_ROOT}\lib\src\pic\libsdcc\*.c"
-  File "${DEV_ROOT}\lib\src\pic\libsdcc\*.S"
-  File "${DEV_ROOT}\lib\src\pic\libsdcc\*.inc"
-#  File "${DEV_ROOT}\lib\src\pic\libsdcc\Makefile"
+  SetOutPath "$INSTDIR\lib\src\pic14\libsdcc"
+  File "${DEV_ROOT}\lib\src\pic14\libsdcc\*.c"
+  File "${DEV_ROOT}\lib\src\pic14\libsdcc\*.S"
+  File "${DEV_ROOT}\lib\src\pic14\libsdcc\*.inc"
+#  File "${DEV_ROOT}\lib\src\pic14\libsdcc\Makefile"
   
-  SetOutPath "$INSTDIR\lib\src\pic\libdev"
-  File "${DEV_ROOT}\lib\src\pic\libdev\*.c"
-#  File "${DEV_ROOT}\lib\src\pic\libdev\Makefile"
+  SetOutPath "$INSTDIR\non-free\lib\src\pic14\libdev"
+  File "${DEV_ROOT}\non-free\lib\src\pic14\libdev\*.c"
+#  File "${DEV_ROOT}\non-free\lib\src\pic14\libdev\Makefile"
 
-  SetOutPath "$INSTDIR\lib\src\pic\libm"
-  File "${DEV_ROOT}\lib\src\pic\libm\*.c"
+  SetOutPath "$INSTDIR\lib\src\pic14\libm"
+  File "${DEV_ROOT}\lib\src\pic14\libm\*.c"
 
   SetOutPath "$INSTDIR\lib\src\pic16"
 #  File "${DEV_ROOT}\lib\src\pic16\configure"
@@ -619,9 +629,9 @@ ${Section} "SDCC library sources" SEC17
   File "${DEV_ROOT}\lib\src\pic16\libc\utils\*.S"
 #  File "${DEV_ROOT}\lib\src\pic16\libc\utils\Makefile"
 
-  SetOutPath "$INSTDIR\lib\src\pic16\libdev"
-  File "${DEV_ROOT}\lib\src\pic16\libdev\*.c"
-#  File "${DEV_ROOT}\lib\src\pic16\libdev\Makefile"
+  SetOutPath "$INSTDIR\non-free\lib\src\pic16\libdev"
+  File "${DEV_ROOT}\non-free\lib\src\pic16\libdev\*.c"
+#  File "${DEV_ROOT}\non-free\lib\src\pic16\libdev\Makefile"
 
   SetOutPath "$INSTDIR\lib\src\pic16\libio"
   File "${DEV_ROOT}\lib\src\pic16\libio\*.ignore"
@@ -706,7 +716,7 @@ LangString DESC_SEC12 ${LANG_ENGLISH} "SDCC large model library"
 LangString DESC_SEC13 ${LANG_ENGLISH} "SDCC small-stack-auto model library"
 LangString DESC_SEC14 ${LANG_ENGLISH} "SDCC HC08 library"
 LangString DESC_SEC15 ${LANG_ENGLISH} "SDCC PIC16 library"
-LangString DESC_SEC16 ${LANG_ENGLISH} "SDCC PIC library"
+LangString DESC_SEC16 ${LANG_ENGLISH} "SDCC PIC14 library"
 LangString DESC_SEC17 ${LANG_ENGLISH} "SDCC library sources"
 
 ;Assign language strings to sections
@@ -842,10 +852,14 @@ ${Section} Uninstall SECUNINSTALL
 
   Delete "$INSTDIR\lib\src\*.c"
 
-  Delete "$INSTDIR\lib\pic\*.lib"
+  Delete "$INSTDIR\lib\pic14\*.lib"
+
+  Delete "$INSTDIR\non-free\lib\pic14\*.lib"
 
   Delete "$INSTDIR\lib\pic16\*.o"
   Delete "$INSTDIR\lib\pic16\*.lib"
+
+  Delete "$INSTDIR\non-free\lib\pic16\*.lib"
 
   Delete "$INSTDIR\lib\hc08\*.lib"
 
@@ -869,19 +883,23 @@ ${Section} Uninstall SECUNINSTALL
 
   Delete "$INSTDIR\include\asm\z80\*.h"
   Delete "$INSTDIR\include\asm\pic16\*.h"
-  Delete "$INSTDIR\include\asm\pic\*.h"
+  Delete "$INSTDIR\include\asm\pic14\*.h"
   Delete "$INSTDIR\include\asm\mcs51\*.h"
   Delete "$INSTDIR\include\asm\gbz80\*.h"
   Delete "$INSTDIR\include\asm\ds390\*.h"
   Delete "$INSTDIR\include\asm\default\*.h"
   Delete "$INSTDIR\include\z80\*.h"
-  Delete "$INSTDIR\include\pic\*.h"
-  Delete "$INSTDIR\include\pic\*.txt"
-  Delete "$INSTDIR\include\pic\*.inc"
+  Delete "$INSTDIR\include\pic14\*.h"
+  Delete "$INSTDIR\include\pic14\*.txt"
+  Delete "$INSTDIR\include\pic14\*.inc"
+  Delete "$INSTDIR\non-free\include\pic14\*.h"
   Delete "$INSTDIR\include\pic16\*.h"
+  Delete "$INSTDIR\non-free\include\pic16\*.h"
   Delete "$INSTDIR\include\pic16\*.txt"
   Delete "$INSTDIR\include\mcs51\*.h"
   Delete "$INSTDIR\include\hc08\*.h"
+  Delete "$INSTDIR\include\ds400\*.h"
+  Delete "$INSTDIR\include\ds390\*.h"
   Delete "$INSTDIR\include\*.h"
 
 !ifndef FULL_DOC
@@ -921,8 +939,10 @@ ${Section} Uninstall SECUNINSTALL
   Delete "$INSTDIR\sdcc.ico"
   Delete "$INSTDIR\uninstall.exe"
 
-  RMDir /r "$INSTDIR\lib\src\pic"
+  RMDir /r "$INSTDIR\lib\src\pic14"
+  RMDir /r "$INSTDIR\non-free\lib\src\pic14"
   RMDir /r "$INSTDIR\lib\src\pic16"
+  RMDir /r "$INSTDIR\non-free\lib\src\pic16"
   RMDir "$INSTDIR\lib\src\small"
   RMDir "$INSTDIR\lib\src\medium"
   RMDir "$INSTDIR\lib\src\large"
@@ -934,9 +954,12 @@ ${Section} Uninstall SECUNINSTALL
   RMDir "$INSTDIR\lib\src\ds400"
   RMDir "$INSTDIR\lib\src\hc08"
   RMDir "$INSTDIR\lib\src"
+  RMDir "$INSTDIR\non-free\lib\src"
 
-  RMDir "$INSTDIR\lib\pic"
+  RMDir "$INSTDIR\lib\pic14"
+  RMDir "$INSTDIR\non-free\lib\pic14"
   RMDir "$INSTDIR\lib\pic16"
+  RMDir "$INSTDIR\non-free\lib\pic16"
   RMDir "$INSTDIR\lib\z80"
   RMDir "$INSTDIR\lib\small"
   RMDir "$INSTDIR\lib\medium"
@@ -947,21 +970,31 @@ ${Section} Uninstall SECUNINSTALL
   RMDir "$INSTDIR\lib\ds400"
   RMDir "$INSTDIR\lib\hc08"
   RMDir "$INSTDIR\lib"
+  RMDir "$INSTDIR\non-free\lib"
 
   RMDir "$INSTDIR\include\asm\z80"
   RMDir "$INSTDIR\include\asm\pic16"
-  RMDir "$INSTDIR\include\asm\pic"
+  RMDir "$INSTDIR\non-free\include\asm\pic16"
+  RMDir "$INSTDIR\include\asm\pic14"
+  RMDir "$INSTDIR\non-free\include\asm\pic14"
   RMDir "$INSTDIR\include\asm\mcs51"
   RMDir "$INSTDIR\include\asm\gbz80"
   RMDir "$INSTDIR\include\asm\ds390"
   RMDir "$INSTDIR\include\asm\default"
   RMDir "$INSTDIR\include\asm"
   RMDir "$INSTDIR\include\z80"
-  RMDir "$INSTDIR\include\pic"
+  RMDir "$INSTDIR\include\pic14"
+  RMDir "$INSTDIR\non-free\include\pic14"
   RMDir "$INSTDIR\include\pic16"
+  RMDir "$INSTDIR\non-free\include\pic16"
   RMDir "$INSTDIR\include\mcs51"
   RMDir "$INSTDIR\include\hc08"
+  RMDir "$INSTDIR\include\ds400"
+  RMDir "$INSTDIR\include\ds390"
   RMDir "$INSTDIR\include"
+  RMDir "$INSTDIR\non-free\include"
+
+  RMDir "$INSTDIR\non-free"
 
 !ifdef FULL_DOC
   RMDir /r "$INSTDIR\doc"
@@ -992,18 +1025,15 @@ ${Function} SDCC.AddToPath
   Push $1
   Push $2
   Push $3
-  Push $4
 
   ; don't add if the path doesn't exist
   ${If} ${FileExists} $0
-    Call SDCC.IsNT
-    Pop $4
-    ${If} $4 != 1
-      ; Not on NT: read PATH from environment variable
-      ReadEnvStr $1 PATH
-    ${Else}
+    ${If} ${IsNT}
       ; On NT: read PATH from registry
       ReadRegStr $1 HKCU "Environment" "PATH"
+    ${Else}
+      ; Not on NT: read PATH from environment variable
+      ReadEnvStr $1 PATH
     ${EndIf}
 
     ${StrStr} $2 "$1;" "$0;"
@@ -1015,7 +1045,20 @@ ${Function} SDCC.AddToPath
         ${If} $2 == ""
           ${StrStr} $2 "$1;" "$03\;"
           ${If} $2 == ""
-            ${If} $4 != 1
+            ${If} ${IsNT}
+              ;System PATH variable is at:
+              ;HKLM "/SYSTEM/CurrentControlSet/Control/Session Manager/Environment" "Path"
+              ReadRegStr $1 HKCU "Environment" "PATH"
+              StrCpy $2 $1 1 -1  ; copy last char
+              ${If} $2 == ";"    ; if last char == ;
+                StrCpy $1 $1 -1  ; remove last char
+              ${Endif}
+              ${If} $1 != ""
+                StrCpy $0 "$1;$0"
+              ${Endif}
+              WriteRegExpandStr HKCU "Environment" "PATH" $0
+              SendMessage ${HWND_BROADCAST} ${WM_WININICHANGE} 0 "STR:Environment" /TIMEOUT=5000
+            ${Else}
               ; Not on NT
               StrCpy $1 $WINDIR 2
               FileOpen $1 "$1\autoexec.bat" a
@@ -1029,19 +1072,6 @@ ${Function} SDCC.AddToPath
               FileClose $1
               ${DebugMsg} "SetRebootFlag true"
               SetRebootFlag true
-            ${Else}
-              ;System PATH variable is at:
-              ;HKLM "/SYSTEM/CurrentControlSet/Control/Session Manager/Environment" "Path"
-              ReadRegStr $1 HKCU "Environment" "PATH"
-              StrCpy $2 $1 1 -1  ; copy last char
-              ${If} $2 == ";"    ; if last char == ;
-                StrCpy $1 $1 -1  ; remove last char
-              ${Endif}
-              ${If} $1 != ""
-                StrCpy $0 "$1;$0"
-              ${Endif}
-              WriteRegExpandStr HKCU "Environment" "PATH" $0
-              SendMessage ${HWND_BROADCAST} ${WM_WININICHANGE} 0 "STR:Environment" /TIMEOUT=5000
             ${Endif}
           ${Endif}
         ${Endif}
@@ -1049,7 +1079,6 @@ ${Function} SDCC.AddToPath
     ${Endif}
   ${EndIf}
 
-  Pop $4
   Pop $3
   Pop $2
   Pop $1
@@ -1071,9 +1100,42 @@ ${Function} ${un}SDCC.RemoveFromPath
 
   IntFmt $6 "%c" 26 ; DOS EOF
 
-  Call ${un}SDCC.IsNT
-  Pop $1
-  ${If} $1 != 1
+  ${If} ${IsNT}
+    ;System PATH variable is at:
+    ;HKLM "/SYSTEM/CurrentControlSet/Control/Session Manager/Environment" "Path"
+    ReadRegStr $1 HKCU "Environment" "PATH"
+    StrCpy $5 $1 1 -1 ; copy last char
+    ${If} $5 != ";"   ; if last char != ;
+      StrCpy $1 "$1;" ; append ;
+    ${EndIf}
+    Push $1
+    Push "$0;"
+    Call ${un}StrStr  ; Find `$0;` in $1
+    Pop $2            ; pos of our dir
+    ${If} $2 != ""
+      ; it is in path:
+      ; $0 - path to add
+      ; $1 - path var
+      StrLen $3 "$0;"
+      StrLen $4 $2
+      StrCpy $5 $1 -$4   ; $5 is now the part before the path to remove
+      StrCpy $6 $2 "" $3 ; $6 is now the part after the path to remove
+      StrCpy $3 $5$6
+
+      StrCpy $5 $3 1 -1  ; copy last char
+      ${If} $5 == ";"    ; if last char == ;
+        StrCpy $3 $3 -1  ; remove last char
+      ${EndIf}
+      ${If} $3 != ""
+        ; New PATH not empty: update the registry
+        WriteRegExpandStr HKCU "Environment" "PATH" $3
+      ${Else}
+        ; New PATH empty: remove from the registry
+        DeleteRegValue HKCU "Environment" "PATH"
+      ${EndIf}
+      SendMessage ${HWND_BROADCAST} ${WM_WININICHANGE} 0 "STR:Environment" /TIMEOUT=5000
+    ${Endif}
+  ${Else}
     ; Not on NT
     StrCpy $1 $WINDIR 2
     FileOpen $1 "$1\autoexec.bat" r
@@ -1113,41 +1175,6 @@ ${Function} ${un}SDCC.RemoveFromPath
     Delete "$1\autoexec.bat"
     CopyFiles /SILENT $4 "$1\autoexec.bat"
     Delete $4
-  ${Else}
-    ;System PATH variable is at:
-    ;HKLM "/SYSTEM/CurrentControlSet/Control/Session Manager/Environment" "Path"
-    ReadRegStr $1 HKCU "Environment" "PATH"
-    StrCpy $5 $1 1 -1 ; copy last char
-    ${If} $5 != ";"   ; if last char != ;
-      StrCpy $1 "$1;" ; append ;
-    ${EndIf}
-    Push $1
-    Push "$0;"
-    Call ${un}StrStr  ; Find `$0;` in $1
-    Pop $2            ; pos of our dir
-    ${If} $2 != ""
-      ; it is in path:
-      ; $0 - path to add
-      ; $1 - path var
-      StrLen $3 "$0;"
-      StrLen $4 $2
-      StrCpy $5 $1 -$4   ; $5 is now the part before the path to remove
-      StrCpy $6 $2 "" $3 ; $6 is now the part after the path to remove
-      StrCpy $3 $5$6
-
-      StrCpy $5 $3 1 -1  ; copy last char
-      ${If} $5 == ";"    ; if last char == ;
-        StrCpy $3 $3 -1  ; remove last char
-      ${EndIf}
-      ${If} $3 != ""
-        ; New PATH not empty: update the registry
-        WriteRegExpandStr HKCU "Environment" "PATH" $3
-      ${Else}
-        ; New PATH empty: remove from the registry
-        DeleteRegValue HKCU "Environment" "PATH"
-      ${EndIf}
-      SendMessage ${HWND_BROADCAST} ${WM_WININICHANGE} 0 "STR:Environment" /TIMEOUT=5000
-    ${Endif}
   ${Endif}
 
   Pop $6
@@ -1161,37 +1188,6 @@ ${FunctionEnd}
 !macroend
 !insertmacro SDCC.RemoveFromPath ""
 !insertmacro SDCC.RemoveFromPath "un."
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; Utility Functions                                                           ;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-; IsNT
-; no input
-; output, top of the stack = 1 if NT or 0 if not
-;
-; Usage:
-;   Call IsNT
-;   Pop $R0
-;  ($R0 at this point is 1 or 0)
-
-!macro SDCC.IsNT un
-${Function} ${un}SDCC.IsNT
-  Push $R0
-  ReadRegStr $R0 HKLM "SOFTWARE\Microsoft\Windows NT\CurrentVersion" CurrentVersion
-  ${If} $R0 == ""
-    ; we are not NT.
-    Pop $R0
-    Push 0
-  ${Else}
-    ; NT!!!
-    Pop $R0
-    Push 1
-  ${EndIf}
-${FunctionEnd}
-!macroend
-!insertmacro SDCC.IsNT ""
-!insertmacro SDCC.IsNT "un."
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;  Uninstall/Reinstall page functions                                         ;

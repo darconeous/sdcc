@@ -52,7 +52,7 @@ static bool matchLine (char *, char *, hTab **);
 #define FBYNAME(x) static int x (hTab *vars, lineNode *currPl, lineNode *endPl, \
         lineNode *head, char *cmdLine)
 
-#if !OPT_DISABLE_PIC
+#if !OPT_DISABLE_PIC14
 void peepRules2pCode(peepRule *);
 #endif
 
@@ -113,6 +113,7 @@ pcDistance (lineNode * cpos, char *lbl, bool back)
           if (port->peep.getSize)
             {
               dist += port->peep.getSize(pl);
+/* printf("Line: %s, dist: %i, total: %i\n", pl->line, port->peep.getSize(pl), dist); */
             }
           else
             {
@@ -196,16 +197,12 @@ FBYNAME (labelInRange)
           strstr (currPl->prev->prev->line, "ljmp"))
         return FALSE;
 
-      /* calculate the label distance : the jump for reladdr can be
-         +/- 127 bytes, here I am assuming that an average 8051
-         instruction is 2 bytes long, so if the label is more than
-         63 intructions away, the label is considered out of range
-         for a relative jump. we could get more precise this will
-         suffice for now since it catches > 90% cases */
+      /* Calculate the label distance. For mcs51 the jump can be
+         -127 to + 127 bytes, for Z80 -126 to +129 bytes.*/
       dist = (pcDistance (currPl, lbl, TRUE) +
               pcDistance (currPl, lbl, FALSE));
-
-      /* changed to 127, now that pcDistance return actual number of bytes */
+      /* Use 125 for now. Could be made more exact using port and
+         exact jump location instead of currPl. */
       if (!dist || dist > 127)
         return FALSE;
 
@@ -227,7 +224,7 @@ FBYNAME (labelJTInRange)
   char *lbl;
   int dist, count, i;
 
-  if (!getenv("SDCC_SJMP_JUMPTABLE"))
+  if (TARGET_IS_MCS51 && !getenv("SDCC_SJMP_JUMPTABLE"))
     return FALSE;
 
   /* Only optimize within a jump table */
@@ -247,7 +244,7 @@ FBYNAME (labelJTInRange)
       dist = pcDistance (currPl, lbl, FALSE);
 
       /* three terms used to calculate allowable distance */
-// printf("\nlabel %s %i dist %i cdist 0x%02x 0x%02x\n", lbl, i, dist, dist -(count-i-1)-(7+3*i), 127+(count-i-1)+(7+3*i) - dist);
+ /* printf("\nlabel %s %i dist %i cdist 0x%02x 0x%02x\n", lbl, i, dist, dist -(count-i-1)-(7+3*i), 127+(count-i-1)+(7+3*i) - dist); */
       if (!dist ||
           dist > 127+           /* range of sjmp */
                  (7+3*i)+       /* offset between this jump and currPl,
@@ -257,6 +254,14 @@ FBYNAME (labelJTInRange)
         return FALSE;
     }
   return TRUE;
+}
+
+/*-----------------------------------------------------------------*/
+/* optimizeReturn - is it allowed to optimize RET instructions     */
+/*-----------------------------------------------------------------*/
+FBYNAME (optimizeReturn)
+{
+  return (options.peepReturn >= 0);
 }
 
 /*-----------------------------------------------------------------*/
@@ -470,202 +475,6 @@ FBYNAME (notUsed)
 }
 
 /*-----------------------------------------------------------------*/
-/* operandsNotSame2 - check if %1 & %2 are the same                 */
-/*-----------------------------------------------------------------*/
-FBYNAME (operandsNotSame2)
-{
-  char *op1 = hTabItemWithKey (vars, 1);
-  char *op2 = hTabItemWithKey (vars, 2);
-
-  if (strcmp (op1, op2) == 0)
-    return FALSE;
-  else
-    return TRUE;
-}
-
-/*-----------------------------------------------------------------*/
-/* operandsNotSame3- check if any pair of %1,%2,%3 are the same    */
-/*-----------------------------------------------------------------*/
-FBYNAME (operandsNotSame3)
-{
-  char *op1 = hTabItemWithKey (vars, 1);
-  char *op2 = hTabItemWithKey (vars, 2);
-  char *op3 = hTabItemWithKey (vars, 3);
-
-  if ( (strcmp (op1, op2) == 0) ||
-       (strcmp (op1, op3) == 0) ||
-       (strcmp (op2, op3) == 0) )
-    return FALSE;
-  else
-    return TRUE;
-}
-
-/*-----------------------------------------------------------------*/
-/* operandsNotSame4- check if any pair of %1,%2,%3,.. are the same */
-/*-----------------------------------------------------------------*/
-FBYNAME (operandsNotSame4)
-{
-  char *op1 = hTabItemWithKey (vars, 1);
-  char *op2 = hTabItemWithKey (vars, 2);
-  char *op3 = hTabItemWithKey (vars, 3);
-  char *op4 = hTabItemWithKey (vars, 4);
-
-  if ( (strcmp (op1, op2) == 0) ||
-       (strcmp (op1, op3) == 0) ||
-       (strcmp (op1, op4) == 0) ||
-       (strcmp (op2, op3) == 0) ||
-       (strcmp (op2, op4) == 0) ||
-       (strcmp (op3, op4) == 0) )
-    return FALSE;
-  else
-    return TRUE;
-}
-
-/*-----------------------------------------------------------------*/
-/* operandsNotSame5- check if any pair of %1,%2,%3,.. are the same */
-/*-----------------------------------------------------------------*/
-FBYNAME (operandsNotSame5)
-{
-  char *op1 = hTabItemWithKey (vars, 1);
-  char *op2 = hTabItemWithKey (vars, 2);
-  char *op3 = hTabItemWithKey (vars, 3);
-  char *op4 = hTabItemWithKey (vars, 4);
-  char *op5 = hTabItemWithKey (vars, 5);
-
-  if ( (strcmp (op1, op2) == 0) ||
-       (strcmp (op1, op3) == 0) ||
-       (strcmp (op1, op4) == 0) ||
-       (strcmp (op1, op5) == 0) ||
-       (strcmp (op2, op3) == 0) ||
-       (strcmp (op2, op4) == 0) ||
-       (strcmp (op2, op5) == 0) ||
-       (strcmp (op3, op4) == 0) ||
-       (strcmp (op3, op5) == 0) ||
-       (strcmp (op4, op5) == 0) )
-    return FALSE;
-  else
-    return TRUE;
-}
-
-/*-----------------------------------------------------------------*/
-/* operandsNotSame6- check if any pair of %1,%2,%3,.. are the same */
-/*-----------------------------------------------------------------*/
-FBYNAME (operandsNotSame6)
-{
-  char *op1 = hTabItemWithKey (vars, 1);
-  char *op2 = hTabItemWithKey (vars, 2);
-  char *op3 = hTabItemWithKey (vars, 3);
-  char *op4 = hTabItemWithKey (vars, 4);
-  char *op5 = hTabItemWithKey (vars, 5);
-  char *op6 = hTabItemWithKey (vars, 6);
-
-  if ( (strcmp (op1, op2) == 0) ||
-       (strcmp (op1, op3) == 0) ||
-       (strcmp (op1, op4) == 0) ||
-       (strcmp (op1, op5) == 0) ||
-       (strcmp (op1, op6) == 0) ||
-       (strcmp (op2, op3) == 0) ||
-       (strcmp (op2, op4) == 0) ||
-       (strcmp (op2, op5) == 0) ||
-       (strcmp (op2, op6) == 0) ||
-       (strcmp (op3, op4) == 0) ||
-       (strcmp (op3, op5) == 0) ||
-       (strcmp (op3, op6) == 0) ||
-       (strcmp (op4, op5) == 0) ||
-       (strcmp (op4, op6) == 0) ||
-       (strcmp (op5, op6) == 0) )
-    return FALSE;
-  else
-    return TRUE;
-}
-
-/*-----------------------------------------------------------------*/
-/* operandsNotSame7- check if any pair of %1,%2,%3,.. are the same */
-/*-----------------------------------------------------------------*/
-FBYNAME (operandsNotSame7)
-{
-  char *op1 = hTabItemWithKey (vars, 1);
-  char *op2 = hTabItemWithKey (vars, 2);
-  char *op3 = hTabItemWithKey (vars, 3);
-  char *op4 = hTabItemWithKey (vars, 4);
-  char *op5 = hTabItemWithKey (vars, 5);
-  char *op6 = hTabItemWithKey (vars, 6);
-  char *op7 = hTabItemWithKey (vars, 7);
-
-  if ( (strcmp (op1, op2) == 0) ||
-       (strcmp (op1, op3) == 0) ||
-       (strcmp (op1, op4) == 0) ||
-       (strcmp (op1, op5) == 0) ||
-       (strcmp (op1, op6) == 0) ||
-       (strcmp (op1, op7) == 0) ||
-       (strcmp (op2, op3) == 0) ||
-       (strcmp (op2, op4) == 0) ||
-       (strcmp (op2, op5) == 0) ||
-       (strcmp (op2, op6) == 0) ||
-       (strcmp (op2, op7) == 0) ||
-       (strcmp (op3, op4) == 0) ||
-       (strcmp (op3, op5) == 0) ||
-       (strcmp (op3, op6) == 0) ||
-       (strcmp (op3, op7) == 0) ||
-       (strcmp (op4, op5) == 0) ||
-       (strcmp (op4, op6) == 0) ||
-       (strcmp (op4, op7) == 0) ||
-       (strcmp (op5, op6) == 0) ||
-       (strcmp (op5, op7) == 0) ||
-       (strcmp (op6, op7) == 0) )
-    return FALSE;
-  else
-    return TRUE;
-}
-
-/*-----------------------------------------------------------------*/
-/* operandsNotSame8- check if any pair of %1,%2,%3,.. are the same */
-/*-----------------------------------------------------------------*/
-FBYNAME (operandsNotSame8)
-{
-  char *op1 = hTabItemWithKey (vars, 1);
-  char *op2 = hTabItemWithKey (vars, 2);
-  char *op3 = hTabItemWithKey (vars, 3);
-  char *op4 = hTabItemWithKey (vars, 4);
-  char *op5 = hTabItemWithKey (vars, 5);
-  char *op6 = hTabItemWithKey (vars, 6);
-  char *op7 = hTabItemWithKey (vars, 7);
-  char *op8 = hTabItemWithKey (vars, 8);
-
-  if ( (strcmp (op1, op2) == 0) ||
-       (strcmp (op1, op3) == 0) ||
-       (strcmp (op1, op4) == 0) ||
-       (strcmp (op1, op5) == 0) ||
-       (strcmp (op1, op6) == 0) ||
-       (strcmp (op1, op7) == 0) ||
-       (strcmp (op1, op8) == 0) ||
-       (strcmp (op2, op3) == 0) ||
-       (strcmp (op2, op4) == 0) ||
-       (strcmp (op2, op5) == 0) ||
-       (strcmp (op2, op6) == 0) ||
-       (strcmp (op2, op7) == 0) ||
-       (strcmp (op2, op8) == 0) ||
-       (strcmp (op3, op4) == 0) ||
-       (strcmp (op3, op5) == 0) ||
-       (strcmp (op3, op6) == 0) ||
-       (strcmp (op3, op7) == 0) ||
-       (strcmp (op3, op8) == 0) ||
-       (strcmp (op4, op5) == 0) ||
-       (strcmp (op4, op6) == 0) ||
-       (strcmp (op4, op7) == 0) ||
-       (strcmp (op4, op8) == 0) ||
-       (strcmp (op5, op6) == 0) ||
-       (strcmp (op5, op7) == 0) ||
-       (strcmp (op5, op8) == 0) ||
-       (strcmp (op6, op7) == 0) ||
-       (strcmp (op6, op8) == 0) ||
-       (strcmp (op7, op8) == 0) )
-    return FALSE;
-  else
-    return TRUE;
-}
-
-/*-----------------------------------------------------------------*/
 /* labelHashEntry- searches for a label in the list labelHash      */
 /* Builds labelHash, if it does not yet exist.                     */
 /* Returns the labelHashEntry or NULL                              */
@@ -819,7 +628,7 @@ FBYNAME (labelRefCountChange)
   else
     {
       fprintf (stderr,
-               "*** internal error: labelRefCount peephole restriction"
+               "*** internal error: labelRefCountChange peephole restriction"
                " malformed: %s\n", cmdLine);
     }
   return rc;
@@ -1123,6 +932,50 @@ operandBaseName (const char *op)
   return op;
 }
 
+/*-----------------------------------------------------------------*/
+/* canAssign - Check, if we can do ld dst, src.                    */
+/*-----------------------------------------------------------------*/
+FBYNAME (canAssign)
+{
+  set *operands;
+  const char *dst, *src, *exotic;
+
+  operands = setFromConditionArgs (cmdLine, vars);
+
+  if (!operands || elementsInSet(operands) < 2 || elementsInSet(operands) > 3)
+    {
+      fprintf (stderr,
+               "*** internal error: canAssign peephole restriction"
+               " malformed: %s\n", cmdLine);
+      return FALSE;
+    }
+
+  if(elementsInSet(operands) == 3)
+    {
+      exotic = setFirstItem (operands);
+      src = setNextItem (operands);
+      dst = setNextItem (operands);
+    }
+  else
+    {
+      exotic = 0;
+      src = setFirstItem (operands);
+      dst = setNextItem (operands);
+    }
+
+  if (port->peep.canAssign)
+    {  
+      bool ret = port->peep.canAssign (dst, src, exotic);
+      deleteSet (&operands);
+      return (ret);
+    }
+
+  deleteSet (&operands);
+
+  fprintf (stderr, "Function canAssign not initialized in port structure\n");
+  return FALSE;
+}
+
 /*-------------------------------------------------------------------*/
 /* operandsNotRelated - returns true if the condition's operands are */
 /* not related (taking into account register name aliases). N-way    */
@@ -1236,81 +1089,70 @@ static const struct ftab
   char *fname;
   int (*func) (hTab *, lineNode *, lineNode *, lineNode *, char *);
 }
-ftab[] =                                // sorted on the number of times used
-{                                       // in the peephole rules on 2007-10-29
+ftab[] =                                            // sorted on the number of times used
+{                                                   // in the peephole rules on 2010-06-12
   {
-    "labelRefCount", labelRefCount                  //105
+    "labelRefCount", labelRefCount                  // 161
   },
   {
-    "notVolatile", notVolatile                      //85
+    "notVolatile", notVolatile                      // 118
   },
   {
-    "labelRefCountChange", labelRefCountChange      //74
+    "notUsed", notUsed                              // 96
   },
   {
-    "labelInRange", labelInRange                    //37
+    "labelRefCountChange", labelRefCountChange      // 86
   },
   {
-    "labelJTInRange", labelJTInRange                //13
+    "labelInRange", labelInRange                    // 51
   },
   {
-    "operandsNotRelated", operandsNotRelated        //9
+    "notSame", notSame                              // 28
   },
   {
-    "24bitMode", flat24bitMode                      //9
+    "operandsNotRelated", operandsNotRelated        // 28
   },
   {
-    "operandsNotSame2", operandsNotSame2            //8
+    "labelJTInRange", labelJTInRange                // 13
   },
   {
-    "operandsNotSame3", operandsNotSame3
+    "24bitMode", flat24bitMode                      // 9
   },
   {
-    "operandsNotSame4", operandsNotSame4
+    "canAssign", canAssign                          // 8
   },
   {
-    "operandsNotSame5", operandsNotSame5
+    "optimizeReturn", optimizeReturn                // ? just a guess
   },
   {
-    "operandsNotSame6", operandsNotSame6
+    "labelIsReturnOnly", labelIsReturnOnly          // 6
   },
   {
-    "operandsNotSame7", operandsNotSame7
+    "operandsLiteral", operandsLiteral              // 6
   },
   {
-    "operandsNotSame8", operandsNotSame8
+    "portIsDS390", portIsDS390                      // 5
   },
   {
-    "xramMovcOption", xramMovcOption
+    "labelIsUncondJump", labelIsUncondJump          // 4
   },
   {
-    "portIsDS390", portIsDS390
+    "deadMove", deadMove                            // 2
   },
   {
-    "labelIsReturnOnly", labelIsReturnOnly
+    "deadMove", deadMove                            // 2
   },
   {
-    "labelIsUncondJump", labelIsUncondJump
+    "useAcallAjmp", useAcallAjmp                    // 2
   },
   {
-    "okToRemoveSLOC", okToRemoveSLOC
+    "xramMovcOption", xramMovcOption                // 2
   },
   {
-    "deadMove", deadMove
-  },
-  {
-    "operandsLiteral", operandsLiteral
-  },
-  {
-    "useAcallAjmp", useAcallAjmp
-  },
-  {
-    "notUsed", notUsed
-  },
-  {
-    "notSame", notSame
+    "okToRemoveSLOC", okToRemoveSLOC                // 0
   }
 };
+
 /*-----------------------------------------------------------------*/
 /* callFuncByName - calls a function as defined in the table       */
 /*-----------------------------------------------------------------*/
@@ -1458,7 +1300,8 @@ static peepRule *
 newPeepRule (lineNode * match,
              lineNode * replace,
              char *cond,
-             int restart)
+             int restart,
+             int barrier)
 {
   peepRule *pr;
 
@@ -1466,6 +1309,7 @@ newPeepRule (lineNode * match,
   pr->match = match;
   pr->replace = replace;
   pr->restart = restart;
+  pr->barrier = barrier;
 
   if (cond && *cond)
     {
@@ -1596,8 +1440,9 @@ getPeepLine (lineNode ** head, char **bpp)
 static void
 readRules (char *bp)
 {
-  char restart = 0;
+  char restart = 0, barrier = 0;
   char lines[MAX_PATTERN_LEN];
+  size_t safetycounter;
   char *lp, *rp;
   lineNode *match;
   lineNode *replace;
@@ -1607,10 +1452,16 @@ readRules (char *bp)
     return;
 top:
   restart = 0;
+  barrier = 0;
+
   /* look for the token "replace" that is the
      start of a rule */
   while (*bp && strncmp (bp, "replace", 7))
-    bp++;
+    {
+      if (!strncmp (bp, "barrier", 7))
+        barrier = 1;
+      bp++;
+    }
 
   /* if not found */
   if (!*bp)
@@ -1677,17 +1528,18 @@ top:
 
       /* look for the condition */
       lp = lines;
-      while (*bp && (*bp != '\n'))
+      for (safetycounter = 0; *bp && (*bp != '\n'); safetycounter++)
         {
+          wassertl(safetycounter < MAX_PATTERN_LEN, "Peephole line too long.\n");
           *lp++ = *bp++;
         }
       *lp = '\0';
 
-      newPeepRule (match, replace, lines, restart);
+      newPeepRule (match, replace, lines, restart, barrier);
     }
   else
     {
-      if (*bp && strncmp (bp, "replace", 7))
+      if (*bp && strncmp (bp, "replace", 7) && strncmp (bp, "barrier", 7))
         {
           /* not the start of a new peeprule, so "if" should be here */
 
@@ -1711,7 +1563,7 @@ top:
           fprintf (stderr, "%s\nexpected '} if ...'\n", strbuff);
           return;
         }
-      newPeepRule (match, replace, NULL, restart);
+      newPeepRule (match, replace, NULL, restart, barrier);
     }
   goto top;
 
@@ -2389,9 +2241,9 @@ peepHole (lineNode ** pls)
   lineNode *mtail = NULL;
   bool restart, replaced;
 
-#if !OPT_DISABLE_PIC || !OPT_DISABLE_PIC16
+#if !OPT_DISABLE_PIC14 || !OPT_DISABLE_PIC16
   /* The PIC port uses a different peep hole optimizer based on "pCode" */
-  if (TARGET_IS_PIC || TARGET_IS_PIC16)
+  if (TARGET_PIC_LIKE)
     return;
 #endif
 
@@ -2404,6 +2256,9 @@ peepHole (lineNode ** pls)
       /* for all rules */
       for (pr = rootRules; pr; pr = pr->next)
         {
+          if (restart && pr->barrier)
+            break;
+
           for (spl = *pls; spl; spl = replaced ? spl : spl->next)
             {
               replaced = FALSE;
@@ -2504,6 +2359,7 @@ readFileIntoBuffer (char *fname)
           nch = 0;
         }
     }
+  fclose (f);
 
   /* if some characters left over */
   if (nch)
@@ -2527,7 +2383,7 @@ readFileIntoBuffer (char *fname)
 /* initPeepHole - initialises the peep hole optimizer stuff        */
 /*-----------------------------------------------------------------*/
 void
-initPeepHole ()
+initPeepHole (void)
 {
   char *s;
 
@@ -2546,13 +2402,12 @@ initPeepHole ()
       options.nopeep = 0;
     }
 
-
-#if !OPT_DISABLE_PIC
+#if !OPT_DISABLE_PIC14
   /* Convert the peep rules into pcode.
      NOTE: this is only support in the PIC port (at the moment)
   */
-        if (TARGET_IS_PIC)
-                peepRules2pCode(rootRules);
+  if (TARGET_IS_PIC14)
+    peepRules2pCode (rootRules);
 #endif
 
 #if !OPT_DISABLE_PIC16
@@ -2560,9 +2415,8 @@ initPeepHole ()
      NOTE: this is only support in the PIC port (at the moment)
        and the PIC16 port (VR 030601)
   */
-        if (TARGET_IS_PIC16)
-                pic16_peepRules2pCode(rootRules);
+  if (TARGET_IS_PIC16)
+    pic16_peepRules2pCode (rootRules);
 
 #endif
-
 }

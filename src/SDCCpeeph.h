@@ -26,7 +26,7 @@
 #ifndef  SDCCPEEPH_H
 #define SDCCPEEPH_H 1
 
-#define MAX_PATTERN_LEN 128
+#define MAX_PATTERN_LEN 256
 
 struct asmLineNode;	/* defined in each port */
 struct lineNode;
@@ -51,6 +51,7 @@ typedef struct peepRule
     lineNode *match;
     lineNode *replace;
     unsigned int restart:1;
+    unsigned int barrier:1;
     char *cond;
     hTab *vars;
     struct peepRule *next;

@@ -1271,6 +1271,7 @@ pic16emitStaticSeg (memmap * map)
   /* for all variables in this segment do */
   for (sym = setFirstItem (map->syms); sym; sym = setNextItem (map->syms))
     {
+      int size = getSize (sym->type);
 
 #if 0
       fprintf (stderr, "%s\t%s: sym: %s\tused: %d\tSPEC_ABSA: %d\tSPEC_AGGREGATE: %d\tCODE: %d\n\
@@ -1282,14 +1283,12 @@ CODESPACE: %d\tCONST: %d\tPTRCONST: %d\tSPEC_CONST: %d\n", __FUNCTION__, map->sn
       if (SPEC_ABSA (sym->etype) && PIC16_IS_CONFIG_ADDRESS (SPEC_ADDR (sym->etype)))
         {
           pic16_assignConfigWordValue (SPEC_ADDR (sym->etype), (int) ulFromVal (list2val (sym->ival)));
-
           continue;
         }
 
       if (SPEC_ABSA (sym->etype) && PIC16_IS_IDLOC_ADDRESS (SPEC_ADDR (sym->etype)))
         {
           pic16_assignIdByteValue (SPEC_ADDR (sym->etype), (char) ulFromVal (list2val (sym->ival)));
-
           continue;
         }
 
@@ -1298,6 +1297,12 @@ CODESPACE: %d\tCONST: %d\tPTRCONST: %d\tSPEC_CONST: %d\n", __FUNCTION__, map->sn
         {
           checkAddSym (&externs, sym);
           continue;
+        }
+
+      /* bail out on incomplete types */
+      if (0 == size)
+        {
+          werrorfl (sym->fileDef, sym->lineDef, E_UNKNOWN_SIZE, sym->name);
         }
 
       /* if it is not static add it to the public

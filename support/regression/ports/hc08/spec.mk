@@ -1,5 +1,6 @@
 # Regression test specification for the hc08 target running with uCsim
-#
+
+CC_FOR_BUILD = $(CC)
 
 # path to uCsim
 ifdef SDCC_BIN_PATH
@@ -10,27 +11,42 @@ else
   UCHC08A = $(top_builddir)/sim/ucsim/hc08.src/shc08$(EXEEXT)
   UCHC08B = $(top_builddir)/bin/shc08$(EXEEXT)
 
-  UCHC08 = $(shell if [ -f $(UCHC08A) ]; then echo $(UCHC08A); else echo $(UCHC08B); fi)
+  UCHC08C = $(shell if [ -f $(UCHC08A) ]; then echo $(UCHC08A); else echo $(UCHC08B); fi)
 
-  AS_HC08 = $(top_builddir)/bin/sdas6808$(EXEEXT)
+  AS_HC08C = $(top_builddir)/bin/sdas6808$(EXEEXT)
 
+ifndef CROSSCOMPILING
   SDCCFLAGS += --nostdinc -I$(top_srcdir)
   LINKFLAGS += --nostdlib -L$(top_builddir)/device/lib/build/hc08
 endif
+endif
 
-SDCCFLAGS +=-mhc08 --less-pedantic --out-fmt-ihx -DREENTRANT=__reentrant
+ifdef CROSSCOMPILING
+  SDCCFLAGS += -I$(top_srcdir)
+
+  EMU = wine $(UCHC08C)
+  AS_HC08 = wine $(AS_HC08C)
+else
+  EMU = $(UCHC08C)
+  AS_HC08 = $(AS_HC08C)
+endif
+
+SDCCFLAGS += -mhc08 --less-pedantic --out-fmt-ihx -DREENTRANT=__reentrant
 LINKFLAGS += hc08.lib
 
 OBJEXT = .rel
 BINEXT = .ihx
 
+# otherwise `make` deletes testfwk.rel and `make -j` will fail
+.PRECIOUS: $(PORT_CASES_DIR)/%$(OBJEXT)
+
+# Required extras
 EXTRAS = $(PORT_CASES_DIR)/testfwk$(OBJEXT) $(PORT_CASES_DIR)/support$(OBJEXT)
+FWKLIB = $(PORT_CASES_DIR)/statics$(OBJEXT)
 
 # Rule to link into .ihx
-#%$(BINEXT): %$(OBJEXT) $(EXTRAS)
-
-%$(BINEXT): %$(OBJEXT) $(EXTRAS)
-	$(SDCC) $(SDCCFLAGS) $(LINKFLAGS) $(EXTRAS) $< -o $@
+%$(BINEXT): %$(OBJEXT) $(EXTRAS) $(FWKLIB) $(PORT_CASES_DIR)/fwk.lib
+	$(SDCC) $(SDCCFLAGS) $(LINKFLAGS) $(EXTRAS) $(PORT_CASES_DIR)/fwk.lib $< -o $@
 
 %$(OBJEXT): %.asm
 	$(AS_HC08) -plosgff $<
@@ -44,15 +60,18 @@ $(PORT_CASES_DIR)/%$(OBJEXT): $(PORTS_DIR)/$(PORT)/%.c
 $(PORT_CASES_DIR)/%$(OBJEXT): fwk/lib/%.c
 	$(SDCC) $(SDCCFLAGS) -c $< -o $@
 
+$(PORT_CASES_DIR)/fwk.lib:
+	cp $(PORTS_DIR)/$(PORT)/fwk.lib $@
+
 # run simulator with 10 seconds timeout
-%.out: %$(BINEXT) $(CASES_DIR)/timeout$(EXEEXT)
+%.out: %$(BINEXT) $(CASES_DIR)/timeout
 	mkdir -p $(dir $@)
-	-$(CASES_DIR)/timeout 10 $(UCHC08) $< < $(PORTS_DIR)/$(PORT)/uCsim.cmd > $@ \
+	-$(CASES_DIR)/timeout 10 $(EMU) $< < $(PORTS_DIR)/$(PORT)/uCsim.cmd > $@ \
 	  || echo -e --- FAIL: \"timeout, simulation killed\" in $(<:$(BINEXT)=.c)"\n"--- Summary: 1/1/1: timeout >> $@
 	python $(srcdir)/get_ticks.py < $@ >> $@
 	-grep -n FAIL $@ /dev/null || true
 
-$(CASES_DIR)/timeout$(EXEEXT): fwk/lib/timeout.c
-	$(CC) $(CFLAGS) $< -o $@
+$(CASES_DIR)/timeout: $(srcdir)/fwk/lib/timeout.c
+	$(CC_FOR_BUILD) $(CFLAGS) $< -o $@
 
 _clean:

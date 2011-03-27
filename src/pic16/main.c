@@ -25,6 +25,7 @@
 -------------------------------------------------------------------------*/
 
 #include "common.h"
+#include "SDCCsystem.h"
 #include "main.h"
 #include "ralloc.h"
 #include "device.h"
@@ -83,7 +84,7 @@ pic16_sectioninfo_t pic16_sectioninfo;
 
 extern char *pic16_processor_base_name(void);
 
-void  pic16_pCodeInitRegisters(void);
+void pic16_pCodeInitRegisters(void);
 
 void pic16_assignRegisters (ebbIndex *);
 
@@ -99,9 +100,8 @@ extern set *libFilesSet;
 /* for an unknowned reason. - EEP */
 void pic16_emitDebuggerSymbol (const char *);
 
-extern void pic16_emitConfigRegs(FILE *of);
-extern void pic16_emitIDRegs(FILE *of);
-
+extern void pic16_emitConfigRegs (FILE *of);
+extern void pic16_emitIDRegs (FILE *of);
 
 
 static void
@@ -137,11 +137,11 @@ _pic16_regparm (sym_link * l, bool reentrant)
 
 
 int initsfpnt=0;        /* set to 1 if source provides a pragma for stack
-                 * so glue() later emits code to initialize stack/frame pointers */
+                         * so glue() later emits code to initialize stack/frame pointers */
 set *absSymSet;
 
-set *sectNames=NULL;            /* list of section listed in pragma directives */
-set *sectSyms=NULL;         /* list of symbols set in a specific section */
+set *sectNames=NULL;    /* list of section listed in pragma directives */
+set *sectSyms=NULL;     /* list of symbols set in a specific section */
 set *wparamList=NULL;
 
 #if 0
@@ -167,7 +167,7 @@ enum {
 };
 
 static int
-do_pragma(int id, const char *name, const char *cp)
+do_pragma (int id, const char *name, const char *cp)
 {
   struct pragma_token_s token;
   int err = 0;
@@ -482,7 +482,7 @@ static struct pragma_s pragma_tbl[] = {
   };
 
 static int
-_process_pragma(const char *s)
+_process_pragma (const char *s)
 {
   return process_pragma_tbl(pragma_tbl, s);
 }
@@ -627,28 +627,14 @@ _pic16_parseOptions (int *pargc, char **argv, int *i)
 
 extern void pic16_init_pic(const char *name);
 
-static void _pic16_initPaths(void)
+static void
+_pic16_initPaths (void)
 {
-    set *pic16libDirsSet=NULL;
-
-    if (!options.nostdlib) {
-        struct dbuf_s pic16libDir;
-
-        dbuf_init(&pic16libDir, 128);
-        dbuf_makePath(&pic16libDir, LIB_DIR_SUFFIX, "pic16");
-        pic16libDirsSet = appendStrSet(dataDirsSet, NULL, dbuf_c_str(&pic16libDir));
-        dbuf_destroy(&pic16libDir);
-        mergeSets(&pic16libDirsSet, libDirsSet);
-        libDirsSet = pic16libDirsSet;
-    }
-
-    /* now that we have the paths set up... */
-    pic16_init_pic(port->processor);
+  pic16_init_pic(port->processor);
 }
 
 extern set *linkOptionsSet;
 char *msprintf(hTab *pvals, const char *pformat, ...);
-int my_system(const char *cmd);
 
 /* forward declarations */
 extern const char *pic16_linkCmd[];
@@ -671,7 +657,7 @@ _pic16_linkEdit (void)
    * {linker} {incdirs} {lflags} -o {outfile} {spec_ofiles} {ofiles} {libs}
    *
    */
-  sprintf (lfrm, "{linker} {incdirs} {lflags} -w -r -o {outfile} {user_ofile} {ofiles} {spec_ofiles} {libs}");
+  sprintf (lfrm, "{linker} {incdirs} {lflags} -w -r -o \"{outfile}\" \"{user_ofile}\" {ofiles} {spec_ofiles} {libs}");
 
   shash_add (&linkValues, "linker", pic16_linkCmd[0]);
 
@@ -686,14 +672,14 @@ _pic16_linkEdit (void)
   if (fullSrcFileName)
     {
       SNPRINTF (temp, sizeof (temp), "%s.o", fullDstFileName ? fullDstFileName : dstFileName);
-//    addSetHead (&relFilesSet, Safe_strdup(temp));
+//    addSetHead (&relFilesSet, Safe_strdup (temp));
       shash_add (&linkValues, "user_ofile", temp);
     }
 
   if (!pic16_options.no_crt)
     shash_add (&linkValues, "spec_ofiles", pic16_options.crt_name);
 
-  shash_add (&linkValues, "ofiles", joinStrSet (relFilesSet));
+  shash_add (&linkValues, "ofiles", joinStrSet (appendStrSet (relFilesSet, "\"", "\"")));
 
   if (!libflags.ignore)
     {
@@ -710,14 +696,14 @@ _pic16_linkEdit (void)
         }
 
       if (libflags.want_libdebug)
-        addSet(&libFilesSet, Safe_strdup("libdebug.lib"));
+        addSet(&libFilesSet, Safe_strdup ("libdebug.lib"));
     }
 
-  shash_add(&linkValues, "libs", joinStrSet(libFilesSet));
+  shash_add (&linkValues, "libs", joinStrSet (appendStrSet (libFilesSet, "\"", "\"")));
 
   lcmd = msprintf(linkValues, lfrm);
 
-  ret = my_system (lcmd);
+  ret = sdcc_system (lcmd);
 
   Safe_free (lcmd);
 
@@ -845,7 +831,8 @@ _pic16_getRegName (struct regs *reg)
 
 
 #if 1
-static  char *_pic16_mangleFunctionName(char *sz)
+static const char *
+_pic16_mangleFunctionName (const char *sz)
 {
 //  fprintf(stderr, "mangled function name: %s\n", sz);
 
@@ -918,7 +905,8 @@ _pic16_genIVT (struct dbuf_s * oBuf, symbol ** interrupts, int maxInterrupts)
 
 /* return True if the port can handle the type,
  * False to convert it to function call */
-static bool _hasNativeMulFor (iCode *ic, sym_link *left, sym_link *right)
+static bool
+_hasNativeMulFor (iCode *ic, sym_link *left, sym_link *right)
 {
   //fprintf(stderr,"checking for native mult for %c (size: %d)\n", ic->op, getSize(OP_SYMBOL(IC_RESULT(ic))->type));
   int symL, symR, symRes, sizeL = 0, sizeR = 0, sizeRes = 0;
@@ -1116,8 +1104,7 @@ const char *pic16_linkCmd[] =
 */
 const char *pic16_asmCmd[] =
 {
-  "gpasm", "$l", "$3", "-c", "\"$1.asm\"", "-o \"$2\"", NULL
-
+  "gpasm", "$l", "$3", "-o", "\"$2\"", "-c", "\"$1.asm\"", NULL
 };
 
 /* Globals */
@@ -1150,7 +1137,7 @@ PORT pic16_port =
     ".o",           /* extension for object files */
     0               /* no need for linker file */
   },
-  {
+  {                 /* Peephole optimizer */
     _defaultRules
   },
   {

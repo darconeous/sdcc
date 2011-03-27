@@ -59,7 +59,7 @@ ifeq ($(strip $(filter 1 yes,$(USE_PIC16))),)
 TARGETPIC = 16f877
 #TARGETPIC = 16f84
 CFLAGS = -mpic14 -p$(TARGETPIC)
-DIR = pic
+DIR = pic14
 else
 TARGETPIC = 18f452
 CFLAGS	= -mpic16 -p$(TARGETPIC)
@@ -67,8 +67,8 @@ DIR = pic16
 endif
 CFLAGS += -Wl,-q
 CFLAGS += -Wl,--map
-CFLAGS += -I $(SDCC_SRC)/device/include/$(DIR)
-CFLAGS += -L $(SDCC_BIN)/device/lib/$(DIR)/bin
+CFLAGS += -I $(SDCC_SRC)/device/include/$(DIR) -I $(SDCC_SRC)/device/non-free/include/$(DIR)
+CFLAGS += -L $(SDCC_BIN)/device/lib/$(DIR)/bin -L $(SDCC_BIN)/device/non-free/lib/$(DIR)/bin
 #CFLAGS += --no-pcode-opt
 #CFLAGS += -V
 

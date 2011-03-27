@@ -24,8 +24,7 @@
 
 #include <sys/stat.h>
 #include "z80.h"
-#include "MySystem.h"
-#include "BuildCmd.h"
+#include "SDCCsystem.h"
 #include "SDCCutil.h"
 #include "SDCCargs.h"
 #include "dbuf_string.h"
@@ -38,6 +37,7 @@
 #define OPTION_PORTMODE        "--portmode="
 #define OPTION_ASM             "--asm="
 #define OPTION_NO_STD_CRT0     "--no-std-crt0"
+#define OPTION_RESERVE_IY      "--reserve-regs-iy"
 
 static char _z80_defaultRules[] =
 {
@@ -61,6 +61,7 @@ static OPTION _z80_options[] =
     { 0, OPTION_CODE_SEG,        &options.code_seg, "<name> use this name for the code segment", CLAT_STRING },
     { 0, OPTION_CONST_SEG,       &options.const_seg, "<name> use this name for the const segment", CLAT_STRING },
     { 0, OPTION_NO_STD_CRT0,     &options.no_std_crt0, "For the z80/gbz80 do not link default crt0.rel"},
+    { 0, OPTION_RESERVE_IY,      &z80_opts.reserveIY, "Do not use IY" },
     { 0, NULL }
   };
 
@@ -143,6 +144,10 @@ _reg_parm (sym_link * l, bool reentrant)
     }
   else
     {
+      if (!IS_REGISTER(l) || getSize(l) > 2)
+        {
+          return FALSE;
+        }
       if (_G.regParams == 2)
         {
           return FALSE;
@@ -344,6 +349,7 @@ _gbz80_rgblink (void)
 {
   FILE *lnkfile;
   struct dbuf_s lnkFileName;
+  char *buffer;
 
   dbuf_init (&lnkFileName, PATH_MAX);
 
@@ -372,13 +378,15 @@ _gbz80_rgblink (void)
 
   fclose (lnkfile);
 
-  buildCmdLine (buffer,port->linker.cmd, dstFileName, NULL, NULL, NULL);
+  buffer = buildCmdLine (port->linker.cmd, dstFileName, NULL, NULL, NULL);
   /* call the linker */
-  if (my_system (buffer))
+  if (sdcc_system (buffer))
     {
+      Safe_free (buffer);
       perror ("Cannot exec linker");
       exit (1);
     }
+  Safe_free (buffer);
 }
 
 static bool
@@ -473,33 +481,41 @@ static void
 _setValues(void)
 {
   const char *s;
+  struct dbuf_s dbuf;
 
   if (options.nostdlib == FALSE)
     {
       const char *s;
-      char path[PATH_MAX];
+      char *path;
       struct dbuf_s dbuf;
 
-      dbuf_init(&dbuf, PATH_MAX);
+      dbuf_init (&dbuf, PATH_MAX);
 
-      for (s = setFirstItem(libDirsSet); s != NULL; s = setNextItem(libDirsSet))
+      for (s = setFirstItem (libDirsSet); s != NULL; s = setNextItem (libDirsSet))
         {
-          buildCmdLine2(path, sizeof path, "-k\"%s" DIR_SEPARATOR_STRING "{port}\" ", s);
-          dbuf_append_str(&dbuf, path);
+          path = buildCmdLine2 ("-k\"%s" DIR_SEPARATOR_STRING "{port}\" ", s);
+          dbuf_append_str (&dbuf, path);
+          Safe_free (path);
         }
-      buildCmdLine2(path, sizeof path, "-l\"{port}.lib\"", s);
-      dbuf_append_str(&dbuf, path);
+      path = buildCmdLine2 ("-l\"{port}.lib\"", s);
+      dbuf_append_str (&dbuf, path);
+      Safe_free (path);
 
       setMainValue ("z80libspec", dbuf_c_str(&dbuf));
-      dbuf_destroy(&dbuf);
+      dbuf_destroy (&dbuf);
 
-      for (s = setFirstItem(libDirsSet); s != NULL; s = setNextItem(libDirsSet))
+      for (s = setFirstItem (libDirsSet); s != NULL; s = setNextItem (libDirsSet))
         {
           struct stat stat_buf;
 
-          buildCmdLine2(path, sizeof path, "%s" DIR_SEPARATOR_STRING "{port}" DIR_SEPARATOR_STRING "crt0{objext}", s);
-          if (stat(path, &stat_buf) == 0)
-            break;
+          path = buildCmdLine2 ("%s" DIR_SEPARATOR_STRING "{port}" DIR_SEPARATOR_STRING "crt0{objext}", s);
+          if (stat (path, &stat_buf) == 0)
+            {
+              Safe_free (path);
+              break;
+            }
+          else
+            Safe_free (path);
         }
 
       if (s == NULL)
@@ -507,12 +523,12 @@ _setValues(void)
       else
         {
           char *buf;
-          size_t len = strlen(path) + 3;
+          size_t len = strlen (path) + 3;
 
-          buf = Safe_alloc(len);
-          SNPRINTF(buf, len, "\"%s\"", path);
-          setMainValue("z80crt0", buf);
-          Safe_free(buf);
+          buf = Safe_alloc (len);
+          SNPRINTF (buf, len, "\"%s\"", path);
+          setMainValue ("z80crt0", buf);
+          Safe_free (buf);
         }
     }
   else
@@ -521,10 +537,10 @@ _setValues(void)
       setMainValue ("z80crt0", "");
     }
 
-  setMainValue ("z80extralibfiles", (s = joinStrSet(libFilesSet)));
-  Safe_free((void *)s);
-  setMainValue ("z80extralibpaths", (s = joinStrSet(libPathsSet)));
-  Safe_free((void *)s);
+  setMainValue ("z80extralibfiles", (s = joinStrSet (libFilesSet)));
+  Safe_free ((void *)s);
+  setMainValue ("z80extralibpaths", (s = joinStrSet (libPathsSet)));
+  Safe_free ((void *)s);
 
   if (IS_GB)
     {
@@ -540,11 +556,13 @@ _setValues(void)
   setMainValue ("stdobjdstfilename" , "{dstfilename}{objext}");
   setMainValue ("stdlinkdstfilename", "{dstfilename}{z80outext}");
 
-  setMainValue ("z80extraobj", (s = joinStrSet(relFilesSet)));
-  Safe_free((void *)s);
+  setMainValue ("z80extraobj", (s = joinStrSet (relFilesSet)));
+  Safe_free ((void *)s);
 
-  sprintf (buffer, "-b_CODE=0x%04X -b_DATA=0x%04X", options.code_loc, options.data_loc);
-  setMainValue ("z80bases", buffer);
+  dbuf_init (&dbuf, 128);
+  dbuf_printf (&dbuf, "-b_CODE=0x%04X -b_DATA=0x%04X", options.code_loc, options.data_loc);
+  setMainValue ("z80bases", dbuf_c_str (&dbuf));
+  dbuf_destroy (&dbuf);
 }
 
 static void
@@ -602,17 +620,18 @@ _setDefaultOptions (void)
       bds - first two args appear in BC and DE, the rest on the stack
       s - all arguments are on the stack.
 */
-static char *
-_mangleSupportFunctionName(char *original)
+static const char *
+_mangleSupportFunctionName(const char *original)
 {
-  char buffer[128];
+  struct dbuf_s dbuf;
 
-  sprintf(buffer, "%s_rr%s_%s", original,
+  dbuf_init (&dbuf, 128);
+  dbuf_printf(&dbuf, "%s_rr%s_%s", original,
           options.profile ? "f" : "x",
           options.noRegParams ? "s" : "bds" /* MB: but the library only has hds variants ??? */
           );
 
-  return Safe_strdup(buffer);
+  return dbuf_detach_c_str (&dbuf);
 }
 
 static const char *
@@ -756,11 +775,12 @@ PORT z80_port =
   },
   {                             /* Peephole optimizer */
     _z80_defaultRules,
+    z80instructionSize,
     0,
     0,
     0,
-    0,
-    z80notUsed
+    z80notUsed,
+    z80canAssign,
   },
   {
         /* Sizes: char, short, int, long, ptr, fptr, gptr, bit, float, max */
@@ -843,7 +863,7 @@ PORT z80_port =
   1,                            /* transform >= to ! < */
   1,                            /* transform != to !(a == b) */
   0,                            /* leave == */
-  TRUE,                         /* Array initializer support. */
+  FALSE,                         /* Array initializer support. */
   0,                            /* no CSE cost estimation yet */
   _z80_builtins,                /* builtin functions */
   GPOINTER,                     /* treat unqualified pointers as "generic" pointers */
@@ -884,8 +904,14 @@ PORT gbz80_port =
     _crt,                       /* crt */
     _libs_gb,                   /* libs */
   },
-  {
-    _gbz80_defaultRules
+  {                             /* Peephole optimizer */
+    _gbz80_defaultRules,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
   },
   {
     /* Sizes: char, short, int, long, ptr, fptr, gptr, bit, float, max */
@@ -968,7 +994,7 @@ PORT gbz80_port =
   1,                            /* transform >= to ! < */
   1,                            /* transform != to !(a == b) */
   0,                            /* leave == */
-  TRUE,                         /* Array initializer support. */
+  FALSE,                         /* Array initializer support. */
   0,                            /* no CSE cost estimation yet */
   NULL,                         /* no builtin functions */
   GPOINTER,                     /* treat unqualified pointers as "generic" pointers */

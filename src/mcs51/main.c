@@ -24,7 +24,7 @@ static OPTION _mcs51_options[] =
     { 0, OPTION_STACK_SIZE,  &options.stack_size, "Tells the linker to allocate this space for stack", CLAT_INTEGER },
     { 0, "--parms-in-bank1", &options.parms_in_bank1, "use Bank1 for parameter passing"},
     { 0, "--pack-iram",      NULL, "Tells the linker to pack variables in internal ram (default)"},
-    { 0, "--no-pack-iram",   &options.no_pack_iram, "Tells the linker not to pack variables in internal ram"},
+    { 0, "--no-pack-iram",   &options.no_pack_iram, "Deprecated: Tells the linker not to pack variables in internal ram"},
     { 0, "--acall-ajmp",     &options.acall_ajmp, "Use acall/ajmp instead of lcall/ljmp" },
     { 0, NULL }
   };
@@ -39,27 +39,21 @@ static char *_mcs51_keywords[] =
   "critical",
   "data",
   "far",
+  "generic",
   "idata",
   "interrupt",
+  "naked",
   "near",
   "nonbanked",
+  "overlay",
   "pdata",
   "reentrant",
+  "sbit",
   "sfr",
   "sfr16",
   "sfr32",
-  "sbit",
   "using",
   "xdata",
-  "_data",
-  "_code",
-  "_generic",
-  "_near",
-  "_xdata",
-  "_pdata",
-  "_idata",
-  "_naked",
-  "_overlay",
   NULL
 };
 
@@ -709,39 +703,42 @@ getRegsWritten (lineNode *line)
   return line->aln->regsWritten;
 }
 
+static const char * models[] = 
+{
+  "small",  "small-xstack",  "small-stack-auto",  "small-xstack-auto",
+  "medium", "medium-xstack", "medium-stack-auto", "medium-xstack-auto",
+  "large",  "large-xstack",  "large-stack-auto",  "large-xstack-auto",
+  "huge",   "huge-xstack",   "huge-stack-auto",   "huge-xstack-auto",
+};
+
 static const char *
 get_model (void)
 {
+  int index;
+
   switch (options.model)
     {
     case MODEL_SMALL:
-      if (options.stackAuto)
-        return "small-stack-auto";
-      else
-        return "small";
-
+      index = 0;
+      break;
     case MODEL_MEDIUM:
-      if (options.stackAuto)
-        return "medium-stack-auto";
-      else
-        return "medium";
-
+      index = 4;
+      break;
     case MODEL_LARGE:
-      if (options.stackAuto)
-        return "large-stack-auto";
-      else
-        return "large";
-
+      index = 8;
+      break;
     case MODEL_HUGE:
-      if (options.stackAuto)
-        return "huge-stack-auto";
-      else
-        return "huge";
-
+      index = 12;
+      break;
     default:
       werror (W_UNKNOWN_MODEL, __FILE__, __LINE__);
       return "unknown";
     }
+  if (options.stackAuto)
+    index += 2;
+  if (options.useXstack)
+    index += 1;
+  return models[index];
 }
 
 /** $1 is always the basename.
@@ -801,7 +798,8 @@ PORT mcs51_port =
     getRegsRead,
     getRegsWritten,
     mcs51DeadMove,
-    0
+    0,
+    0,
   },
   {
     /* Sizes: char, short, int, long, ptr, fptr, gptr, bit, float, max */

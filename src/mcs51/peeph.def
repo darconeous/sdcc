@@ -1576,9 +1576,17 @@ replace {
 	anl	%1,#%2
 	anl	%1,#%3
 } by {
-	;	Peephole 183	avoided anl during execution
+	;	Peephole 183.a	avoided anl during execution
 	anl	%1,#(%2&%3)
-}
+} if notVolatile %1
+
+replace {
+	orl	%1,#%2
+	orl	%1,#%3
+} by {
+	;	Peephole 183.b	avoided orl during execution
+	orl	%1,#(%2|%3)
+} if notVolatile %1
 
 replace {
 	mov	%1,a
@@ -2204,7 +2212,7 @@ replace	 {
 	mov	%1,a
 	;	Peephole 214.a	removed redundant mov
 	add	a,%2
-} if operandsNotSame2
+} if notSame(%1 %2)
 
 replace {
 	mov	%1,a
@@ -2214,7 +2222,7 @@ replace {
 	;	Peephole 214.b	removed redundant mov
 	add	a,%2
 	mov	%1,a
-} if operandsNotSame2
+} if notSame(%1 %2)
 
 replace {
 	mov	r%1,%2
@@ -2654,39 +2662,41 @@ replace {
 	xrl	a,r%1
 }
 
-replace {
-	sjmp	%1
-%2:
-	mov	%3,%4
-%1:
-	ret
-} by {
-	;	Peephole 237.a	removed sjmp to ret
-	ret
-%2:
-	mov	%3,%4
-%1:
-	ret
-} if labelRefCountChange(%1 -1)
+// obsoleted by 251.b
+//replace {
+//	sjmp	%1
+//%2:
+//	mov	%3,%4
+//%1:
+//	ret
+//} by {
+//	;	Peephole 237.a	removed sjmp to ret
+//	ret
+//%2:
+//	mov	%3,%4
+//%1:
+//	ret
+//} if labelRefCountChange(%1 -1)
 
-replace {
-	sjmp	%1
-%2:
-	mov	%3,%4
-	mov	dpl,%5
-	mov	dph,%6
-%1:
-	ret
-} by {
-	;	Peephole 237.b	removed sjmp to ret
-	ret
-%2:
-	mov	%3,%4
-	mov	dpl,%5
-	mov	dph,%6
-%1:
-	ret
-} if labelRefCountChange(%1 -1)
+// obsoleted by 251.b
+//replace {
+//	sjmp	%1
+//%2:
+//	mov	%3,%4
+//	mov	dpl,%5
+//	mov	dph,%6
+//%1:
+//	ret
+//} by {
+//	;	Peephole 237.b	removed sjmp to ret
+//	ret
+//%2:
+//	mov	%3,%4
+//	mov	dpl,%5
+//	mov	dph,%6
+//%1:
+//	ret
+//} if labelRefCountChange(%1 -1)
 
 // applies to f.e. device/lib/log10f.c
 replace {
@@ -2715,7 +2725,7 @@ replace {
 	mov	%7,%15
 	mov	%8,%16
 	;	Peephole 238.a	removed 4 redundant moves
-} if operandsNotSame8(%1 %2 %3 %4 %5 %6 %7 %8), notVolatile(%1 %2 %3 %4 %9 %10 %11 %12)
+} if notSame(%1 %2 %3 %4 %5 %6 %7 %8), notVolatile(%1 %2 %3 %4 %9 %10 %11 %12)
 
 // applies to device/lib/log10f.c
 replace {
@@ -2733,7 +2743,7 @@ replace {
 	mov	%3,%7
 	mov	%4,%8
 	;	Peephole 238.b	removed 3 redundant moves
-} if operandsNotSame7(%1 %2 %3 %4 %5 %6 %7), notVolatile(%1 %2 %3 %5 %6 %7)
+} if notSame(%1 %2 %3 %4 %5 %6 %7), notVolatile(%1 %2 %3 %5 %6 %7)
 
 // applies to f.e. device/lib/time.c
 replace {
@@ -2752,7 +2762,7 @@ replace {
 	mov	%3,%7
 	mov	%4,%8
 	;	Peephole 238.c	removed 2 redundant moves
-} if operandsNotSame4(%1 %2 %3 %4), notVolatile(%1 %2 %5 %6)
+} if notSame(%1 %2 %3 %4), notVolatile(%1 %2 %5 %6)
 
 // applies to f.e. support/regression/tests/bug-524209.c
 replace {
@@ -2768,7 +2778,7 @@ replace {
 	mov	%2,%5
 	mov	%3,%6
 	;	Peephole 238.d	removed 3 redundant moves
-} if operandsNotSame6(%1 %2 %3 %4 %5 %6), notVolatile(%1 %2 %3 %4 %5 %6)
+} if notSame(%1 %2 %3 %4 %5 %6), notVolatile(%1 %2 %3 %4 %5 %6)
 
 // applies to f.e. ser_ir.asm
 replace {
@@ -3747,6 +3757,58 @@ replace {
 	movx	@dptr,a
 }
 
+// Peeepholes 248.n to 248.p are like previous peepholes but apply to arrays
+// applies to f.e. bug2686159.c
+replace {
+	mov	dptr,%1
+	movx	a,@dptr
+	mov	r%2,a
+	orl	ar%2,%3
+	mov	dptr,%1
+	mov	a,r%2
+	movx	@dptr,a
+} by {
+	mov	dptr,%1
+	movx	a,@dptr
+	;	Peephole 248.n	optimized or to xdata array
+	orl	a,%3
+	mov	r%2,a
+	movx	@dptr,a
+}
+
+replace {
+	mov	dptr,%1
+	movx	a,@dptr
+	mov	r%2,a
+	anl	ar%2,%3
+	mov	dptr,%1
+	mov	a,r%2
+	movx	@dptr,a
+} by {
+	mov	dptr,%1
+	movx	a,@dptr
+	;	Peephole 248.o	optimized and to xdata array
+	anl	a,%3
+	mov	r%2,a
+	movx	@dptr,a
+}
+
+replace {
+	mov	dptr,%1
+	movx	a,@dptr
+	mov	r%2,a
+	xrl	ar%2,%3
+	mov	dptr,%1
+	mov	a,r%2
+	movx	@dptr,a
+} by {
+	mov	dptr,%1
+	movx	a,@dptr
+	;	Peephole 248.p	optimized xor to xdata array
+	xrl	a,%3
+	mov	r%2,a
+	movx	@dptr,a
+}
 
 replace {
 	jnz	%1
@@ -3798,17 +3860,17 @@ replace {
 replace {
 	ljmp	%5
 } by {
-	;	Peephole 251.a	replaced ljmp to ret with ret
+	;	Peephole 251.a	replaced ljmp %5 to ret with ret
 	ret
-} if labelIsReturnOnly(), labelRefCountChange(%5 -1)
+} if optimizeReturn(), labelIsReturnOnly(), labelRefCountChange(%5 -1)
 
 // not before peephole 250.b
 replace {
 	sjmp	%5
 } by {
-	;	Peephole 251.b	replaced sjmp to ret with ret
+	;	Peephole 251.b	replaced sjmp %5 to ret with ret
 	ret
-} if labelIsReturnOnly(), labelRefCountChange(%5 -1)
+} if optimizeReturn(), labelIsReturnOnly(), labelRefCountChange(%5 -1)
 
 // applies to shifts.c and when accessing arrays with an unsigned integer index
 // saving 1 byte, 2 cycles
@@ -4100,7 +4162,7 @@ replace {
 	sjmp	%1
 	;	Peephole 259.a	removed redundant label %2 and ret
 	;
-} if labelRefCount %2 0
+} if optimizeReturn(), labelRefCount(%2 0)
 
 // applies to f.e. gets.c
 replace {
@@ -4111,7 +4173,7 @@ replace {
 	ljmp	%1
 	;	Peephole 259.b	removed redundant label %2 and ret
 	;
-} if labelRefCount %2 0
+} if optimizeReturn(), labelRefCount(%2 0)
 
 // optimizing jumptables
 // Please note: to enable peephole 260.x you currently have to set
@@ -4823,7 +4885,7 @@ replace {
 } by {
 	;	Peephole 400.a	replaced lcall/ret with ljmp
 	ljmp	%1
-}
+} if optimizeReturn()
 
 // applies to: void test( char c ) { if( c ) func1(); else func2(); }
 replace {
@@ -4834,7 +4896,7 @@ replace {
 	;	Peephole 400.b	replaced lcall/ret with ljmp
 	ljmp	%1
 	;
-} if labelRefCount %2 0
+} if optimizeReturn(), labelRefCount(%2 0)
 
 // applies to f.e. scott-bool1.c
 replace {
@@ -4846,13 +4908,13 @@ replace {
 	ljmp	%1
 %2:
 	ret
-}
+} if optimizeReturn()
 
 // for programs less than 2k
 replace {
 	lcall	%1
 } by {
-	;	Peephole 400.d	replaced lcall with acall
+	;	Peephole 401.a	replaced lcall with acall
 	acall	%1
 } if useAcallAjmp
 
@@ -4860,7 +4922,7 @@ replace {
 replace {
 	ljmp	%1
 } by {
-	;	Peephole 400.e	replaced ljmp with ajmp
+	;	Peephole 401.b	replaced ljmp with ajmp
 	ajmp	%1
 } if useAcallAjmp
 

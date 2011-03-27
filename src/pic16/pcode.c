@@ -3364,8 +3364,7 @@ void pic16_pcode_test(void)
 
   //initMnemonics();
 
-  if(the_pFile) {
-
+  if (the_pFile) {
     pBlock *pb;
     FILE *pFile;
     char buffer[100];
@@ -3391,6 +3390,7 @@ void pic16_pcode_test(void)
       fprintf(pFile,", dbName =%c\n",getpBlock_dbName(pb));
       pic16_printpBlock(pFile,pb);
     }
+    fclose(pFile);
   }
 }
 
@@ -3602,7 +3602,7 @@ pCode *pic16_newpCodeCharP(char *cP)
 /*-----------------------------------------------------------------*/
 
 
-pCode *pic16_newpCodeFunction(char *mod,char *f)
+pCode *pic16_newpCodeFunction(const char *mod, const char *f)
 {
   pCodeFunction *pcf;
 
@@ -7246,9 +7246,8 @@ int resolveJumpChain (pCode *pc, pCode **target, pCodeOp **pcop) {
 pCode *skipJumptables (pCode *pc, int *isJumptable)
 {
   *isJumptable = 0;
-  if (!pc) return NULL;
 
-  while (pc->type == PC_INFO && PCINF(pc)->type == INF_OPTIMIZATION && PCOO(PCINF(pc)->oper1)->type == OPT_JUMPTABLE_BEGIN) {
+  while (pc && pc->type == PC_INFO && PCINF(pc)->type == INF_OPTIMIZATION && PCOO(PCINF(pc)->oper1)->type == OPT_JUMPTABLE_BEGIN) {
     *isJumptable = 1;
     //fprintf (stderr, "SKIPPING jumptable\n");
     do {
@@ -7948,7 +7947,7 @@ static void pic16_convertLocalRegs2Support(pCode *pcstart, pCode *pcend, int cou
 //        pc->next = NULL;
 //        pc->prev = NULL;
       }
-    } while ((pc) && (pc != pcend));
+    } while (pc != pcend);
 
     /* unlink movff instructions */
     pcstart->next = pcend;

@@ -1,157 +1,268 @@
-/*
- * Simulator of microcontrollers (ddconfig.h)
- *
- * Copyright (C) 1999,99 Drotos Daniel, Talker Bt.
- *
- * To contact author send email to drdani@mazsola.iit.uni-miskolc.hu
- *
- */
-
-/* This file is part of microcontroller simulator: ucsim.
-
-UCSIM is free software; you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation; either version 2 of the License, or
-(at your option) any later version.
-
-UCSIM is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with UCSIM; see the file COPYING.  If not, write to the Free
-Software Foundation, 59 Temple Place - Suite 330, Boston, MA
-02111-1307, USA. */
-/*@1@*/
+/* ddconfig_in.h.  Generated from configure.in by autoheader.  */
 
 #ifndef DDCONFIG_HEADER
 #define DDCONFIG_HEADER
 
-#define DD_TRUE  1
-#define DD_FALSE 0
-#define NIL     0
-
-#undef STDC_HEADERS
-#undef HAVE_GETOPT_H
-#undef HAVE_UNISTD_H
-#undef HAVE_DIRENT_H
-#undef HAVE_SYS_NDIR_H
-#undef HAVE_SYS_DIR_H
-#undef HAVE_NDIR_H
-#undef HAVE_SYS_SOCKET_H
-#undef HAVE_WINSOCK2_H
-#undef HAVE_DLFCN_H
-#undef HAVE_CURSES_H
-#undef HAVE_TERMIOS_H
-#undef HAVE_ENDIAN_H
-#undef HAVE_SYS_ENDIAN_H
-#undef HAVE_MACHINE_ENDIAN_H
-#undef HAVE_SYS_ISA_DEFS_H
-
-#undef SOCKET_AVAIL
-#undef SOCKLEN_T
-#undef UCSOCKET_T
-#undef HEADER_SOCKET
-
-#undef FD_NEED_TIME_H
-#undef FD_NEED_TYPES_H
-#undef FD_NEED_SELECT_H
-#undef FD_NEED_WINSOCK2_H
-#undef HEADER_FD
-#undef FD_HEADER_OK
-
-#undef SCANF_A
-#undef GNU_GETCWD
-
-#undef HAVE_STRLEN
-#undef HAVE_STRCPY
-#undef HAVE_STRCAT
-#undef HAVE_STRSTR
-#undef HAVE_STRCMP
-#undef HAVE_STRERROR
-#undef HAVE_STRTOK
-#undef HAVE_STRDUP
-#undef HAVE_STRCHR
-
-#undef HAVE_MEMCPY
-
-#undef HAVE_VPRINTF
-#undef HAVE_DOPRNT
-#undef HAVE_VSNPRINTF
-#undef HAVE__VSNPRINTF
-#undef HAVE_VASPRINTF
-
-#undef HAVE_GETLINE
-#undef HAVE_GETDELIM
-#undef HAVE_FGETS
-
-#undef HAVE_YYLEX
-#undef HAVE_FLEX
-#undef YYTEXT_POINTER
-
-#undef RETSIGTYPE
-#undef SIZEOF_CHAR
-#undef SIZEOF_SHORT
-#undef SIZEOF_INT
-#undef SIZEOF_LONG
-#undef SIZEOF_LONG_LONG
-#undef TYPE_BYTE
-#undef TYPE_WORD
-#undef TYPE_DWORD
-#define TYPE_UBYTE unsigned TYPE_BYTE
-#define TYPE_UWORD unsigned TYPE_WORD
-#define TYPE_UDWORD unsigned TYPE_DWORD
-#undef _M_
-#undef _A_
-
-/*
- * find out the endianess of host machine
- */
-#if defined __APPLE__ && (defined __BIG_ENDIAN__ || defined _BIG_ENDIAN)
-/* 1) trust the compiler
- * in order to be able to make Mac OS X unified binaries */
-# define WORDS_BIGENDIAN 1
-#elif defined __APPLE__ && (defined __LITTLE_ENDIAN__ || defined _LITTLE_ENDIAN)
-/* do nothing */
-#elif defined __sun && defined HAVE_SYS_ISA_DEFS_H
-/* Solaris defines endianness in <sys/isa_defs.h> */
-# include <sys/isa_defs.h>
-# ifdef _BIG_ENDIAN
-#   define WORDS_BIGENDIAN 1
-# endif
-#else
-# ifdef HAVE_ENDIAN_H
-#   include <endian.h>
-# elif defined HAVE_SYS_ENDIAN_H
-#   include <sys/endian.h>
-# elif defined HAVE_MACHINE_ENDIAN_H
-#   include <machine/endian.h>
-# endif
-# if (defined BYTE_ORDER && defined BIG_ENDIAN && defined LITTLE_ENDIAN && BYTE_ORDER && BIG_ENDIAN && LITTLE_ENDIAN)
-/* 2) trust the header files */
-#   if BYTE_ORDER == BIG_ENDIAN
-#     define WORDS_BIGENDIAN 1
-#   endif
-# else
-/* 3) trust the configure; this actually doesn't work for unified Mac OS X binaries :-( */
-#   undef BUILD_WORDS_BIGENDIAN
-#   if (defined BUILD_WORDS_BIGENDIAN && BUILD_WORDS_BIGENDIAN)
-#     define WORDS_BIGENDIAN  1
-#   endif
-/* 4) assume that host is a little endian machine */
-# endif
-#endif
-
-#undef VERSIONSTR
-#undef VERSIONHI
-#undef VERSIONLO
-#undef VERSIONP
-
+/* Define to be the type of length parameter of accept (without the \*'). */
 #undef ACCEPT_SOCKLEN_T
 
+/* Define to 1 if your processor stores words with the most significant byte
+   first (like Motorola and SPARC, unlike Intel and VAX). */
+#undef BUILD_WORDS_BIGENDIAN
+
+/* XXX */
+#undef FD_HEADER_OK
+
+/* XXX */
+#undef FD_NEED_SELECT_H
+
+/* XXX */
+#undef FD_NEED_TIME_H
+
+/* XXX */
+#undef FD_NEED_TYPES_H
+
+/* XXX */
+#undef FD_NEED_WINSOCK2_H
+
+/* XXX */
+#undef GNU_GETCWD
+
+/* XXX */
+#undef HAVE_CURSES_H
+
+/* Define to 1 if you have the <dirent.h> header file, and it defines `DIR'.
+   */
+#undef HAVE_DIRENT_H
+
+/* Define to 1 if you have the <dlfcn.h> header file. */
+#undef HAVE_DLFCN_H
+
+/* Define to 1 if you don't have `vprintf' but do have `_doprnt.' */
+#undef HAVE_DOPRNT
+
+/* Define to 1 if you have the <endian.h> header file. */
+#undef HAVE_ENDIAN_H
+
+/* Define to 1 if you have the `fgets' function. */
+#undef HAVE_FGETS
+
+/* XXX */
+#undef HAVE_FLEX
+
+/* Define to 1 if you have the <getopt.h> header file. */
+#undef HAVE_GETOPT_H
+
+/* Define to 1 if you have the <inttypes.h> header file. */
+#undef HAVE_INTTYPES_H
+
+/* Define to 1 if you have the `nsl' library (-lnsl). */
+#undef HAVE_LIBNSL
+
+/* Define to 1 if you have the `socket' library (-lsocket). */
+#undef HAVE_LIBSOCKET
+
+/* Define to 1 if you have the <machine/endian.h> header file. */
+#undef HAVE_MACHINE_ENDIAN_H
+
+/* Define to 1 if you have the `memcpy' function. */
+#undef HAVE_MEMCPY
+
+/* Define to 1 if you have the <memory.h> header file. */
+#undef HAVE_MEMORY_H
+
+/* Define to 1 if you have the <ndir.h> header file, and it defines `DIR'. */
+#undef HAVE_NDIR_H
+
+/* Define to 1 if you have the <stdint.h> header file. */
+#undef HAVE_STDINT_H
+
+/* Define to 1 if you have the <stdlib.h> header file. */
+#undef HAVE_STDLIB_H
+
+/* Define to 1 if you have the `strcat' function. */
+#undef HAVE_STRCAT
+
+/* Define to 1 if you have the `strchr' function. */
+#undef HAVE_STRCHR
+
+/* Define to 1 if you have the `strcmp' function. */
+#undef HAVE_STRCMP
+
+/* Define to 1 if you have the `strcpy' function. */
+#undef HAVE_STRCPY
+
+/* Define to 1 if you have the `strdup' function. */
+#undef HAVE_STRDUP
+
+/* Define to 1 if you have the `strerror' function. */
+#undef HAVE_STRERROR
+
+/* Define to 1 if you have the <strings.h> header file. */
+#undef HAVE_STRINGS_H
+
+/* Define to 1 if you have the <string.h> header file. */
+#undef HAVE_STRING_H
+
+/* Define to 1 if you have the `strlen' function. */
+#undef HAVE_STRLEN
+
+/* Define to 1 if you have the `strstr' function. */
+#undef HAVE_STRSTR
+
+/* Define to 1 if you have the `strtok' function. */
+#undef HAVE_STRTOK
+
+/* Define to 1 if you have the <sys/dir.h> header file, and it defines `DIR'.
+   */
+#undef HAVE_SYS_DIR_H
+
+/* Define to 1 if you have the <sys/endian.h> header file. */
+#undef HAVE_SYS_ENDIAN_H
+
+/* Define to 1 if you have the <sys/isa_defs.h> header file. */
+#undef HAVE_SYS_ISA_DEFS_H
+
+/* Define to 1 if you have the <sys/ndir.h> header file, and it defines `DIR'.
+   */
+#undef HAVE_SYS_NDIR_H
+
+/* XXX */
+#undef HAVE_SYS_SOCKET_H
+
+/* Define to 1 if you have the <sys/stat.h> header file. */
+#undef HAVE_SYS_STAT_H
+
+/* Define to 1 if you have the <sys/types.h> header file. */
+#undef HAVE_SYS_TYPES_H
+
+/* Define to 1 if you have the <termios.h> header file. */
+#undef HAVE_TERMIOS_H
+
+/* Define to 1 if you have the <unistd.h> header file. */
+#undef HAVE_UNISTD_H
+
+/* Define to 1 if you have the `vasprintf' function. */
+#undef HAVE_VASPRINTF
+
+/* Define to 1 if you have the `vprintf' function. */
+#undef HAVE_VPRINTF
+
+/* Define to 1 if you have the `vsnprintf' function. */
+#undef HAVE_VSNPRINTF
+
+/* XXX */
+#undef HAVE_WINSOCK2_H
+
+/* Define to 1 if you have the `yylex' function. */
+#undef HAVE_YYLEX
+
+/* Define to 1 if you have the `_vsnprintf' function. */
+#undef HAVE__VSNPRINTF
+
+/* XXX */
+#undef HEADER_FD
+
+/* XXX */
+#undef HEADER_SOCKET
+
+/* Define to the sub-directory in which libtool stores uninstalled libraries.
+   */
+#undef LT_OBJDIR
+
+/* Define to the address where bug reports for this package should be sent. */
+#undef PACKAGE_BUGREPORT
+
+/* Define to the full name of this package. */
+#undef PACKAGE_NAME
+
+/* Define to the full name and version of this package. */
+#undef PACKAGE_STRING
+
+/* Define to the one symbol short name of this package. */
+#undef PACKAGE_TARNAME
+
+/* Define to the home page for this package. */
+#undef PACKAGE_URL
+
+/* Define to the version of this package. */
+#undef PACKAGE_VERSION
+
+/* Define as the return type of signal handlers (`int' or `void'). */
+#undef RETSIGTYPE
+
+/* XXX */
+#undef SCANF_A
+
+/* The size of `char', as computed by sizeof. */
+#undef SIZEOF_CHAR
+
+/* The size of `int', as computed by sizeof. */
+#undef SIZEOF_INT
+
+/* The size of `long', as computed by sizeof. */
+#undef SIZEOF_LONG
+
+/* The size of `long long', as computed by sizeof. */
+#undef SIZEOF_LONG_LONG
+
+/* The size of `short', as computed by sizeof. */
+#undef SIZEOF_SHORT
+
+/* XXX */
+#undef SOCKET_AVAIL
+
+/* XXX */
+#undef SOCKLEN_T
+
+/* XXX */
 #undef STATISTIC
 
-#endif
+/* Define to 1 if you have the ANSI C header files. */
+#undef STDC_HEADERS
 
-/* End of ddconfig.h */
+/* XXX */
+#undef TYPE_BYTE
+
+/* XXX */
+#undef TYPE_DWORD
+
+/* XXX */
+#undef TYPE_UBYTE
+
+/* XXX */
+#undef TYPE_UDWORD
+
+/* XXX */
+#undef TYPE_UWORD
+
+/* XXX */
+#undef TYPE_WORD
+
+/* XXX */
+#undef UCSOCKET_T
+
+/* XXX */
+#undef VERSIONHI
+
+/* XXX */
+#undef VERSIONLO
+
+/* XXX */
+#undef VERSIONP
+
+/* XXX */
+#undef VERSIONSTR
+
+/* Define to 1 if `lex' declares `yytext' as a `char *' by default, not a
+   `char[]'. */
+#undef YYTEXT_POINTER
+
+/* XXX */
+#undef _A_
+
+/* XXX */
+#undef _M_
+
+#include "custom.h"
+#endif /* DDCONFIG_HEADER */

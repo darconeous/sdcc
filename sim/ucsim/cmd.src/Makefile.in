@@ -16,7 +16,6 @@ MAKEDEP         = @MAKEDEP@
 
 LEX		= @LEX@
 YACC		= @YACC@
-BISON_PLUS_PLUS	= @BISON_PLUS_PLUS@
 
 top_builddir	= @top_builddir@
 top_srcdir	= @top_srcdir@
@@ -42,10 +41,9 @@ infodir         = @infodir@
 srcdir          = @srcdir@
 VPATH           = @srcdir@
 
-OBJECTS		= cmdset.o command.o cmdutil.o syntax.o \
+OBJECTS         = cmdset.o command.o cmdutil.o syntax.o \
 		  get.o set.o timer.o bp.o info.o show.o cmdgui.o cmdconf.o \
-		  cmduc.o cmdstat.o cmdmem.o \
-		  cmdpars.o cmdlex.o newcmd.o
+		  cmduc.o cmdstat.o cmdmem.o newcmd.o
 
 ifeq ($(WINSOCK_AVAIL), 1)
 OBJECTS += newcmdwin32.o
@@ -53,7 +51,10 @@ else
 OBJECTS += newcmdposix.o
 endif
 
-DEVEL		= $(shell test -d $(top_builddir)/devel && echo yes)
+LOCAL_OBJECTS   = cmdpars.o cmdlex.o
+
+SOURCES         = $(addprefix $(srcdir)/, $(OBJECTS:.o=.cc))
+LOCAL_SOURCES   = $(LOCAL_OBJECTS:.o=.cc)
 
 # Compiling entire program or any subproject
 # ------------------------------------------
@@ -93,46 +94,38 @@ installdirs:
 # ---------------------
 dep: Makefile.dep
 
-Makefile.dep: $(srcdir)/*.cc $(srcdir)/*.h
-	$(MAKEDEP) $(CPPFLAGS) $(addprefix $(srcdir)/, $(OBJECTS:.o=.cc)) >Makefile.dep
+Makefile.dep: $(SOURCES) $(LOCAL_SOURCES) $(srcdir)/*.h cmdpars.hh
+	$(MAKEDEP) $(CPPFLAGS) $(SOURCES) $(LOCAL_SOURCES) >Makefile.dep
 
 -include Makefile.dep
 include $(srcdir)/clean.mk
 
-cmdpars.cc: cmdpars.y
-
-ifeq ($(DEVEL),yes)
-  cmdlex.cc: cmdlex.l cmdpars.h
-endif
+cmdpars.cc cmdpars.hh: cmdpars.y
+cmdlex.cc: cmdlex.l cmdpars.hh
 
 # My rules
 # --------
 
 cmdlib: $(top_builddir)/libcmd.a
 
-$(top_builddir)/libcmd.a: $(OBJECTS)
-	ar -rcu $*.a $(OBJECTS)
+$(top_builddir)/libcmd.a: $(OBJECTS) $(LOCAL_OBJECTS)
+	ar -rcu $*.a $(OBJECTS) $(LOCAL_OBJECTS)
 	$(RANLIB) $*.a
 
 .cc.o:
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(TARGET_ARCH) -c $< -o $@
 
-#.y.cc:
-#	rm -f $*.cc $*.h
-#	$(YACC) -d $<
-#	mv y.tab.c $*.cc
-#	mv y.tab.h $*.h
+cmdpars.hh: cmdpars.cc
 
-ifeq ($(DEVEL),yes)
 .y.cc:
-	rm -f $*.cc $*.h
-	$(BISON_PLUS_PLUS) -d -o $*.cc $<
+	rm -f $@ $*.hh
+	$(YACC) -d $<
+	mv y.tab.c $@
+	mv y.tab.h $*.hh
 
 .l.cc:
-	rm -f $*.cc
-	$(LEX) --c++ -o $*.cc $<
-endif
-
+	rm -f $@
+	$(LEX) -t $< > $@
 
 # Remaking configuration
 # ----------------------

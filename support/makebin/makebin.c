@@ -277,7 +277,7 @@ read_ihx (FILE *fin, BYTE *rom, int size, int *real_size)
           return 0;
         }
 
-      if (addr + nbytes >= size)
+      if (addr + nbytes > size)
         {
           fprintf (stderr, "error: size of the buffer is too small.\n");
           return 0;
@@ -436,6 +436,7 @@ main (int argc, char **argv)
   rom = malloc (size);
   if (rom == NULL)
     {
+      fclose (fin);
       fprintf (stderr, "error: couldn't allocate room for the image.\n");
       return 1;
     }
@@ -466,7 +467,9 @@ main (int argc, char **argv)
       fwrite (rom, 1, (pack ? real_size : size), fout);
 
       fclose (fout);
-    }
 
-  return 0;
+      return 0;
+    }
+  else
+    return 1;
 }

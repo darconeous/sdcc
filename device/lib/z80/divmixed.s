@@ -37,20 +37,6 @@ __divsuchar_rrx_s::
 
         jp      __div_signexte
 
-__modsuchar_rrx_s::
-        ld      hl,#2+1
-        add     hl,sp
-
-        ld      e,(hl)
-        dec     hl
-        ld      l,(hl)
-        ld      h,#0
-
-        call    __div_signexte
-
-        ex      de,hl
-        ret
-
 __divuschar_rrx_s::
         ld      hl,#2+1
         ld      d, h

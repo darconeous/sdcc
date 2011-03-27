@@ -1,26 +1,30 @@
+/*-------------------------------------------------------------------------
+   usart.h - USART communications module library header
 
-/*
- * USART communications module library header
- *
- * written for SDCC/pic16 port by Vangelis Rokas, 2005 <vrokas AT otenet.gr>
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Library General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
- *
- *
- * $Id$
- */
+   Copyright (C) 2005, Vangelis Rokas <vrokas AT otenet.gr>
+
+   This library is free software; you can redistribute it and/or modify it
+   under the terms of the GNU General Public License as published by the
+   Free Software Foundation; either version 2.1, or (at your option) any
+   later version.
+
+   This library is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+   GNU General Public License for more details.
+
+   You should have received a copy of the GNU General Public License 
+   along with this library; see the file COPYING. If not, write to the
+   Free Software Foundation, 51 Franklin Street, Fifth Floor, Boston,
+   MA 02110-1301, USA.
+
+   As a special exception, if you link this library with other files,
+   some of which are compiled with SDCC, to produce an executable,
+   this library does not by itself cause the resulting executable to
+   be covered by the GNU General Public License. This exception does
+   not however invalidate any other reasons why the executable file
+   might be covered by the GNU General Public License.
+-------------------------------------------------------------------------*/
 
 #ifndef __USART_H__
 #define __USART_H__
@@ -46,6 +50,94 @@
 #define USART_SYNCH_MODE  0xff
 #define USART_ASYNCH_MODE 0xfe
 
+/*
+ * USART styles:
+ *
+ * --- Families with 1 USART ---
+ *
+ * INIT:
+ *      RCSTA<7> = 1    (SPEN)
+ *      TXSTA<4> = 0    (SYNC)
+ *      TXSTA<5> = 1    (TXEN)
+ *
+ * 18f1220:
+ *      RB1/AN5/TX and RB4/AN6/RX
+ *
+ *      TRISB<1> = TRISB<4> = 1 (TX, RX)
+ *      ADCON1<5> = ADCON1<6> = 1 (PCFG<5>, PCFG<6>)
+ *      SPBRGH:SPBRG
+ *
+ * 18f13k50:
+ *      RB7/TX and RB5/AN11/RX
+ *
+ *      TRISB<7> = TRISB<5> = 1 (TX, RX)
+ *      ANSELH<3> = 0 (ANS11/RX)
+ *      SPBRGH:SPBRG
+ *
+ * 18f2220:
+ *      RC6/TX and RC7/RX
+ *
+ *      TRISC<6> = 0    (TX)
+ *      TRISC<7> = 1    (RX)
+ *      SPBRG
+ *
+ * 18f2221/18f2331/18f23k20/18f2410/18f2420/18f2423/18f2455/18f24j10/18f2525:
+ *      RC6/TX and RC7/RX
+ *
+ *      TRISC<6> = TRISC<7> = 1 (TX, RX)
+ *      SPBRGH:SPBRG
+ *
+ * 18f2450/18f2480/18f2585/18f2682:
+ *      RC6/TX and RC7/RX
+ *
+ *      TRISC<6> = 0    (TX)
+ *      TRISC<7> = 1    (RX)
+ *      SPBRGH:SPBRG
+ *
+ * --- Families with 2+ USARTs ---
+ *
+ * INIT:
+ *      RCSTA1<7> = 1   (SPEN)
+ *      TXSTA1<4> = 0   (SYNC)
+ *      TXSTA1<5> = 1   (TXEN)
+ *
+ * 18f24j50/18f6527/18f65j50/18f66j60:
+ *      RC6/TX1 and RC7/RX1 (EUSART1)
+ *
+ *      TRISC<6> = 0    (TX1)
+ *      TRISC<7> = 1    (RX1)
+ *      SPBRGH1:SPBRG1
+ *
+ * 18f6520:
+ *      RC6/TX1 and RC7/RX1 (EUSART1)
+ *
+ *      TRISC<6> = 0    (TX1)
+ *      TRISC<7> = 1    (RX1)
+ *      SPBRG1
+ *
+ */
+#include "pic18fam.h"
+
+#if (__SDCC_USART_STYLE == 0)
+#warning The target device is not supported by the SDCC PIC16 USART library.
+#endif
+
+#if    (__SDCC_PIC16_FAMILY == 1822200) \
+    || (__SDCC_PIC16_FAMILY == 1802420) \
+    || (__SDCC_PIC16_FAMILY == 1802480) \
+    || (__SDCC_PIC16_FAMILY == 1865200) \
+    || (__SDCC_PIC16_FAMILY == 1865850)
+#define __SDCC_NO_SPBRGH        1
+#endif  /* device lacks SPBRGH */
+
+
+#if __SDCC_NO_SPBRGH
+typedef unsigned char sdcc_spbrg_t;
+#else   /* !__SDCC_NO_SPBRGH */
+typedef unsigned int sdcc_spbrg_t;
+#endif  /* !__SDCC_NO_SPBRGH */
+
+
 /* status bits */
 union USART
 {
@@ -60,19 +152,19 @@ union USART
   };
 };
 
-void usart_open(unsigned char config, unsigned int spbrg) __wparam;
-void usart_close(void);
+void usart_open (unsigned char config, sdcc_spbrg_t spbrg) __wparam;
+void usart_close (void);
 
-unsigned char usart_busy(void) __naked;
-unsigned char usart_drdy(void) __naked;
+unsigned char usart_busy (void) __naked;
+unsigned char usart_drdy (void) __naked;
 
-unsigned char usart_getc(void);
-void usart_gets(RAM_SCLS char *buffer, unsigned char len);
+unsigned char usart_getc (void);
+void usart_gets (RAM_SCLS char * buffer, unsigned char len);
 
-void usart_putc(unsigned char data) __wparam __naked;
-void usart_puts(char *data);
+void usart_putc (unsigned char data) __wparam __naked;
+void usart_puts (char * data);
 
 
-void usart_baud(unsigned char baudconfig) __wparam;
+void usart_baud (sdcc_spbrg_t baudconfig) __wparam;
 
 #endif

@@ -33,19 +33,19 @@ extern int iCodeKey;
 extern int operandKey;
 
 enum
-  {
-    CONDITIONAL = 0,
-    EXPRESSION,
-    STATEMENT,
-    LEAF
-  };
+{
+  CONDITIONAL = 0,
+  EXPRESSION,
+  STATEMENT,
+  LEAF
+};
 
 typedef enum
-  {
-    SYMBOL = 1,
-    VALUE,
-    TYPE
-  }
+{
+  SYMBOL = 1,
+  VALUE,
+  TYPE
+}
 OPTYPE;
 
 #define IS_SYMOP(op) (op && op->type == SYMBOL)
@@ -59,9 +59,9 @@ OPTYPE;
 #define LRETYPE       sym_link *letype= getSpec(ltype)   , \
                            *retype= getSpec(rtype);
 #define LRTYPE        LRFTYPE LRETYPE
-#define IS_ITEMP(op)       (IS_SYMOP(op) && op->operand.symOperand->isitmp == 1)
-#define IS_PARM(op)        (IS_SYMOP(op) && op->operand.symOperand->_isparm)
-#define IS_ITEMPLBL(op)    (IS_ITEMP(op) && op->operand.symOperand->isilbl == 1)
+#define IS_ITEMP(op)       (IS_SYMOP(op) && op->svt.symOperand->isitmp == 1)
+#define IS_PARM(op)        (IS_SYMOP(op) && op->svt.symOperand->_isparm)
+#define IS_ITEMPLBL(op)    (IS_ITEMP(op) && op->svt.symOperand->isilbl == 1)
 #define IS_OP_VOLATILE(op) (IS_SYMOP(op) && op->isvolatile)
 #define IS_OP_LITERAL(op)  (op && op->isLiteral)
 #define IS_OP_GLOBAL(op)   (IS_SYMOP(op) && op->isGlobal)
@@ -72,47 +72,49 @@ OPTYPE;
 
 /* typedef for operand */
 typedef struct operand
+{
+  OPTYPE type;                  /* type of operand */
+  unsigned int isaddr:1;        /* is an address   */
+  unsigned int aggr2ptr:2;      /* 1: must change aggregate to pointer to aggregate */
+  /* 2: aggregate has been changed to pointer to aggregate */
+  unsigned int isvolatile:1;    /* is a volatile operand */
+  unsigned int isGlobal:1;      /* is a global operand */
+  unsigned int isPtr:1;         /* is assigned a pointer */
+  unsigned int isGptr:1;        /* is a generic pointer  */
+  unsigned int isParm:1;        /* is a parameter        */
+  unsigned int isLiteral:1;     /* operand is literal    */
+
+  int key;
+  union
   {
-    OPTYPE type;                /* type of operand */
-    unsigned int isaddr:1;      /* is an address   */
-    unsigned int aggr2ptr:2;    /* 1: must change aggregate to pointer to aggregate */
-                                /* 2: aggregate has been changed to pointer to aggregate */
-    unsigned int isvolatile:1;  /* is a volatile operand */
-    unsigned int isGlobal:1;    /* is a global operand */
-    unsigned int isPtr:1;       /* is assigned a pointer */
-    unsigned int isGptr:1;      /* is a generic pointer  */
-    unsigned int isParm:1;      /* is a parameter        */
-    unsigned int isLiteral:1;   /* operand is literal    */
-
-    int key;
-    union
-      {
-        struct symbol *symOperand;      /* operand is of type symbol */
-        struct value *valOperand;       /* operand is of type value  */
-        struct sym_link *typeOperand;   /* operand is of type typechain */
-      }
-    operand;
-
-    bitVect *usesDefs;          /* which definitions are used by this */
-    struct asmop *aop;          /* asm op for this operand */
+    struct symbol *symOperand;  /* operand is of type symbol */
+    struct value *valOperand;   /* operand is of type value  */
+    struct sym_link *typeOperand;       /* operand is of type typechain */
   }
+  svt;
+
+  bitVect *usesDefs;            /* which definitions are used by this */
+  struct asmop *aop;            /* asm op for this operand */
+}
 operand;
 
-extern operand *validateOpType(operand          *op,
-                               const char       *macro,
-                               const char       *args,
-                               OPTYPE           type,
-                               const char       *file,
-                               unsigned         line);
+extern operand *validateOpType (operand * op,
+                                const char *macro, const char *args, OPTYPE type, const char *file, unsigned line);
 
-#define OP_SYMBOL(op)      validateOpType(op, "OP_SYMBOL", #op, SYMBOL, __FILE__, __LINE__)->operand.symOperand
-#define OP_VALUE(op)       validateOpType(op, "OP_VALUE", #op, VALUE, __FILE__, __LINE__)->operand.valOperand
-#define OP_SYM_TYPE(op)    validateOpType(op, "OP_SYM_TYPE", #op, SYMBOL, __FILE__, __LINE__)->operand.symOperand->type
-#define OP_SYM_ETYPE(op)   validateOpType(op, "OP_SYM_ETYPE", #op, SYMBOL, __FILE__, __LINE__)->operand.symOperand->etype
-#define SPIL_LOC(op)       validateOpType(op, "SPIL_LOC", #op, SYMBOL, __FILE__, __LINE__)->operand.symOperand->usl.spillLoc
-#define OP_LIVEFROM(op)    validateOpType(op, "OP_LIVEFROM", #op, SYMBOL, __FILE__, __LINE__)->operand.symOperand->liveFrom
-#define OP_LIVETO(op)      validateOpType(op, "OP_LIVETO", #op, SYMBOL, __FILE__, __LINE__)->operand.symOperand->liveTo
-#define OP_REQV(op)        validateOpType(op, "OP_REQV", #op, SYMBOL, __FILE__, __LINE__)->operand.symOperand->reqv
+extern const operand *validateOpTypeConst (const operand * op,
+                                           const char *macro, const char *args, OPTYPE type, const char *file, unsigned line);
+
+#define OP_SYMBOL(op)        validateOpType(op, "OP_SYMBOL", #op, SYMBOL, __FILE__, __LINE__)->svt.symOperand
+#define OP_SYMBOL_CONST(op)  validateOpTypeConst(op, "OP_SYMBOL", #op, SYMBOL, __FILE__, __LINE__)->svt.symOperand
+#define OP_VALUE(op)         validateOpType(op, "OP_VALUE", #op, VALUE, __FILE__, __LINE__)->svt.valOperand
+#define OP_SYM_TYPE(op)      validateOpType(op, "OP_SYM_TYPE", #op, SYMBOL, __FILE__, __LINE__)->svt.symOperand->type
+#define OP_SYM_ETYPE(op)     validateOpType(op, "OP_SYM_ETYPE", #op, SYMBOL, __FILE__, __LINE__)->svt.symOperand->etype
+#define SPIL_LOC(op)         validateOpType(op, "SPIL_LOC", #op, SYMBOL, __FILE__, __LINE__)->svt.symOperand->usl.spillLoc
+#define OP_LIVEFROM(op)      validateOpType(op, "OP_LIVEFROM", #op, SYMBOL, __FILE__, __LINE__)->svt.symOperand->liveFrom
+#define OP_LIVETO(op)        validateOpType(op, "OP_LIVETO", #op, SYMBOL, __FILE__, __LINE__)->svt.symOperand->liveTo
+#define OP_REQV(op)          validateOpType(op, "OP_REQV", #op, SYMBOL, __FILE__, __LINE__)->svt.symOperand->reqv
+#define OP_KEY(op)           validateOpType(op, "OP_REQV", #op, SYMBOL, __FILE__, __LINE__)->svt.symOperand->key
+#define OP_TYPE(op)          validateOpType(op, "OP_TYPE", #op, TYPE, __FILE__, __LINE__)->svt.typeOperand
 
 /* definition for intermediate code */
 #define IC_RESULT(x) (x)->ulrrcnd.lrr.result
@@ -128,83 +130,83 @@ extern operand *validateOpType(operand          *op,
 #define IC_ARRAYILIST(x) (x)->arrayInitList
 
 typedef struct iCode
+{
+  unsigned int op;              /* operation defined */
+  int key;                      /* running key for this iCode */
+  int seq;                      /* sequence number within routine */
+  int seqPoint;                 /* sequence point */
+  short depth;                  /* loop depth of this iCode */
+  short level;                  /* scope level */
+  short block;                  /* sequential block number */
+  unsigned nosupdate:1;         /* don't update spillocation with this */
+  unsigned generated:1;         /* code generated for this one */
+  unsigned parmPush:1;          /* parameter push Vs spill push */
+  unsigned supportRtn:1;        /* will cause a call to a support routine */
+  unsigned regsSaved:1;         /* registers have been saved */
+  unsigned bankSaved:1;         /* register bank has been saved */
+  unsigned builtinSEND:1;       /* SEND for parameter of builtin function */
+
+  struct iCode *next;           /* next in chain */
+  struct iCode *prev;           /* previous in chain */
+  set *movedFrom;               /* if this iCode gets moved to another block */
+  bitVect *rlive;               /* ranges that are live at this point */
+  int defKey;                   /* key for the operand being defined  */
+  bitVect *uses;                /* vector of key of used symbols      */
+  bitVect *rUsed;               /* registers used by this instruction */
+  bitVect *rMask;               /* registers in use during this instruction */
+  union
   {
-    unsigned int op;            /* operation defined */
-    int key;                    /* running key for this iCode */
-    int seq;                    /* sequence number within routine */
-    int seqPoint;               /* sequence point */
-    short depth;                /* loop depth of this iCode */
-    short level;                /* scope level */
-    short block;                /* sequential block number */
-    unsigned nosupdate:1;       /* don't update spillocation with this */
-    unsigned generated:1;       /* code generated for this one */
-    unsigned parmPush:1;        /* parameter push Vs spill push */
-    unsigned supportRtn:1;      /* will cause a call to a support routine */
-    unsigned regsSaved:1;       /* registers have been saved */
-    unsigned bankSaved:1;       /* register bank has been saved */
-    unsigned builtinSEND:1;     /* SEND for parameter of builtin function */
+    struct
+    {
+      operand *left;            /* left if any   */
+      operand *right;           /* right if any  */
+      operand *result;          /* result of this op */
+    }
+    lrr;
 
-    struct iCode *next;         /* next in chain */
-    struct iCode *prev;         /* previous in chain */
-    set *movedFrom;             /* if this iCode gets moved to another block */
-    bitVect *rlive;             /* ranges that are live at this point */
-    int defKey;                 /* key for the operand being defined  */
-    bitVect *uses;              /* vector of key of used symbols      */
-    bitVect *rUsed;             /* registers used by this instruction */
-    bitVect *rMask;             /* registers in use during this instruction */
-    union
-      {
-        struct
-          {
-            operand *left;      /* left if any   */
-            operand *right;     /* right if any  */
-            operand *result;    /* result of this op */
-          }
-        lrr;
+    struct
+    {
+      operand *condition;       /* if this is a conditional */
+      symbol *trueLabel;        /* true for conditional     */
+      symbol *falseLabel;       /* false for conditional    */
+    }
+    cnd;
 
-        struct
-          {
-            operand *condition; /* if this is a conditional */
-            symbol *trueLabel;  /* true for conditional     */
-            symbol *falseLabel; /* false for conditional    */
-          }
-        cnd;
+    struct
+    {
+      operand *condition;       /* condition for the jump */
+      set *labels;              /* ordered set of labels  */
+    }
+    jmpTab;
 
-        struct
-          {
-            operand *condition; /* condition for the jump */
-            set *labels;        /* ordered set of labels  */
-          }
-        jmpTab;
-
-      }
-    ulrrcnd;
-
-    symbol *label;              /* for a goto statement     */
-
-    char *inlineAsm;            /* pointer to inline assembler code */
-    literalList *arrayInitList; /* point to array initializer list. */
-
-    int lineno;                 /* file & lineno for debug information */
-    char *filename;
-
-    int parmBytes;              /* if call/pcall, count of parameter bytes
-                                   on stack */
-    int argreg;                 /* argument regno for SEND/RECEIVE */
-    int eBBlockNum;             /* belongs to which eBBlock */
-    char riu;                   /* after ralloc, the registers in use */
-    struct ast * tree;          /* ast node for this iCode (if not NULL) */
   }
+  ulrrcnd;
+
+  symbol *label;                /* for a goto statement     */
+
+  char *inlineAsm;              /* pointer to inline assembler code */
+  literalList *arrayInitList;   /* point to array initializer list. */
+
+  int lineno;                   /* file & lineno for debug information */
+  char *filename;
+
+  int parmBytes;                /* if call/pcall, count of parameter bytes
+                                   on stack */
+  int argreg;                   /* argument regno for SEND/RECEIVE */
+  int eBBlockNum;               /* belongs to which eBBlock */
+  char riu;                     /* after ralloc, the registers in use */
+  struct ast *tree;             /* ast node for this iCode (if not NULL) */
+}
 iCode;
 
 /* various functions associated to iCode */
 typedef struct icodeFuncTable
-  {
-    int icode;
-    char *printName;
-    void (*iCodePrint) (struct dbuf_s *, iCode *, char *);
-    iCode *(*iCodeCopy) (iCode *);
-  }
+{
+  int icode;
+  char *printName;
+  void (*iCodePrint) (struct dbuf_s *, iCode *, char *);
+  iCode *(*iCodeCopy) (iCode *);
+}
 iCodeTable;
 
 /* useful macros */
@@ -293,8 +295,8 @@ iCodeTable;
 #define SET_RESULT_RIGHT(ic) {SET_ISADDR(IC_RIGHT(ic),0); SET_ISADDR(IC_RESULT(ic),0);}
 #define IS_ASSIGN_ICODE(ic) (ASSIGNMENT(ic) && !POINTER_SET(ic))
 
-#define OP_DEFS(op) validateOpType(op, "OP_DEFS", #op, SYMBOL, __FILE__, __LINE__)->operand.symOperand->defs
-#define OP_USES(op) validateOpType(op, "OP_USES", #op, SYMBOL, __FILE__, __LINE__)->operand.symOperand->uses
+#define OP_DEFS(op) validateOpType(op, "OP_DEFS", #op, SYMBOL, __FILE__, __LINE__)->svt.symOperand->defs
+#define OP_USES(op) validateOpType(op, "OP_USES", #op, SYMBOL, __FILE__, __LINE__)->svt.symOperand->uses
 /*-----------------------------------------------------------------*/
 /* forward references for functions                                */
 /*-----------------------------------------------------------------*/
@@ -303,7 +305,7 @@ bool isOperandOnStack (operand *);
 int isOperandVolatile (operand *, bool);
 int isOperandGlobal (operand *);
 void printiCChain (iCode *, FILE *);
-operand *ast2iCode (ast *,int);
+operand *ast2iCode (ast *, int);
 operand *geniCodePtrPtrSubtract (operand *, operand *);
 void initiCode ();
 iCode *iCodeFromAst (ast *);
@@ -317,8 +319,8 @@ operand *operandFromLit (double);
 operand *operandFromOperand (operand *);
 int isParameterToCall (value *, operand *);
 iCode *newiCodeLabelGoto (int, symbol *);
-symbol *newiTemp (char *);
-symbol *newiTempLabel (char *);
+symbol *newiTemp (const char *);
+symbol *newiTempLabel (const char *);
 #define LOOPEXITLBL "loopExitLbl"
 symbol *newiTempLoopHeaderLabel (bool);
 iCode *newiCode (int, operand *, operand *);
@@ -329,7 +331,7 @@ operand *operandFromSymbol (symbol *);
 operand *operandFromLink (sym_link *);
 sym_link *aggrToPtr (sym_link *, bool);
 int aggrToPtrDclType (sym_link *, bool);
-void  setOClass (sym_link * ptr, sym_link * spec);
+void setOClass (sym_link * ptr, sym_link * spec);
 int piCode (void *, FILE *);
 int dbuf_printOperand (operand *, struct dbuf_s *);
 int printOperand (operand *, FILE *);
@@ -342,7 +344,7 @@ operand *opFromOpWithDU (operand *, bitVect *, bitVect *);
 iCode *copyiCode (iCode *);
 operand *newiTempOperand (sym_link *, char);
 operand *newiTempFromOp (operand *);
-iCode *getBuiltinParms (iCode *,int *, operand **);
+iCode *getBuiltinParms (iCode *, int *, operand **);
 int isiCodeInFunctionCall (iCode *);
 /*-----------------------------------------------------------------*/
 /* declaration of exported variables                               */

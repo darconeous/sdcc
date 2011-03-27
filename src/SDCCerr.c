@@ -224,9 +224,8 @@ struct
    "unknown size for operand" },
 { W_LONG_UNSUPPORTED, ERROR_LEVEL_WARNING,
    "'%s' 'long' not supported , declared as 'int'." },
-{ E_LITERAL_GENERIC, ERROR_LEVEL_ERROR,
-   //"illegal cast of LITERAL value to 'generic' pointer: assuming 'xdata' pointer" },
-   "illegal cast of LITERAL value to 'generic' pointer" },
+{ W_LITERAL_GENERIC, ERROR_LEVEL_WARNING,
+   "cast of LITERAL value to 'generic' pointer" },
 { E_SFR_ADDR_RANGE, ERROR_LEVEL_ERROR,
    "%s '%s' address out of range" },
 { E_BITVAR_STORAGE, ERROR_LEVEL_ERROR,
@@ -303,7 +302,7 @@ struct
    "constant is out of range %s" },
 { W_CODE_UNREACH, ERROR_LEVEL_PEDANTIC,
    "unreachable code" },
-{ E_NONPTR2_GENPTR, ERROR_LEVEL_ERROR,
+{ W_NONPTR2_GENPTR, ERROR_LEVEL_WARNING,
    "non-pointer type cast to generic pointer" },
 { W_POSSBUG, ERROR_LEVEL_WARNING,
    "possible code generation error at line %d,\n"
@@ -353,8 +352,8 @@ struct
    "stray '\\' at column %d" },
 { W_NEWLINE_IN_STRING, ERROR_LEVEL_WARNING,
    "newline in string constant" },
-{ E_CANNOT_USE_GENERIC_POINTER, ERROR_LEVEL_ERROR,
-   "cannot use generic pointer %s to initialize %s" },
+{ W_USING_GENERIC_POINTER, ERROR_LEVEL_WARNING,
+   "using generic pointer %s to initialize %s" },
 { W_EXCESS_SHORT_OPTIONS, ERROR_LEVEL_WARNING,
    "Only one short option can be specified at a time.  Rest of %s ignored." },
 { E_VOID_VALUE_USED, ERROR_LEVEL_ERROR,
@@ -448,6 +447,14 @@ struct
    "pointer target lost %s qualifier" },
 { W_DEPRECATED_KEYWORD, ERROR_LEVEL_WARNING,
    "keyword '%s' is deprecated, use '%s' instead" },
+{ E_STORAGE_CLASS_FOR_PARAMETER, ERROR_LEVEL_ERROR,
+   "storage class specified for parameter '%s'" },
+{ E_OFFSETOF_TYPE, ERROR_LEVEL_ERROR,
+   "offsetof can only be applied to structs/unions" },
+{ E_INCOMPLETE_FIELD, ERROR_LEVEL_ERROR,
+   "field '%s' has incomplete type" },
+{ W_DEPRECATED_OPTION, ERROR_LEVEL_WARNING,
+   "deprecated compiler option '%s'" },
 { E_BAD_DESIGNATOR, ERROR_LEVEL_ERROR,
    "Invalid designator for designated initializer" },
 { W_DUPLICATE_INIT, ERROR_LEVEL_WARNING,
@@ -481,7 +488,7 @@ vwerror - Output a standard error message with variable number of arguments
 -------------------------------------------------------------------------------
 */
 
-void
+int
 vwerror (int errNum, va_list marker)
 {
   if (_SDCCERRG.out == NULL)
@@ -540,10 +547,12 @@ vwerror (int errNum, va_list marker)
     
         vfprintf (_SDCCERRG.out, ErrTab[errNum].errText,marker);
         fprintf (_SDCCERRG.out, "\n");
+        return 1;
     }
   else
     {
       /* Below the logging level, drop. */
+      return 0;
     }
 }
 
@@ -554,13 +563,15 @@ werror - Output a standard error message with variable number of arguments
 -------------------------------------------------------------------------------
 */
 
-void
+int
 werror (int errNum, ...)
 {
+  int ret;
   va_list marker;
   va_start (marker, errNum);
-  vwerror (errNum, marker);
+  ret = vwerror (errNum, marker);
   va_end (marker);
+  return ret;
 }
 
 /*
@@ -571,22 +582,24 @@ werrorfl - Output a standard error message with variable number of arguments.
 -------------------------------------------------------------------------------
 */
 
-void
+int
 werrorfl (char *newFilename, int newLineno, int errNum, ...)
 {
   char *oldFilename = filename;
   int oldLineno = lineno;
   va_list marker;
+  int ret;
 
   filename = newFilename;
   lineno = newLineno;
 
   va_start (marker,errNum);
-  vwerror (errNum, marker);
+  ret = vwerror (errNum, marker);
   va_end (marker);
 
   filename = oldFilename;
   lineno = oldLineno;
+  return ret;
 }
 
 
@@ -628,7 +641,7 @@ disabled - Disable output of specified warning
 void
 setWarningDisabled (int errNum)
 {
-  if ((errNum < MAX_ERROR_WARNING) && (ErrTab[errNum].errType <= ERROR_LEVEL_WARNING))
+  if ((errNum >= 0) && (errNum < MAX_ERROR_WARNING) && (ErrTab[errNum].errType <= ERROR_LEVEL_WARNING))
     _SDCCERRG.disabled[errNum] = 1;
 }
 

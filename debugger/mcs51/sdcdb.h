@@ -24,6 +24,8 @@
 #ifndef  SDCDB_H
 #define  SDCDB_H
 
+#define SDCDB_VERSION	"0.9"
+
 #define SDCDB_DEBUG
 
 #ifdef SDCDB_DEBUG
@@ -45,7 +47,13 @@ extern int sdcdbDebug;
 #include <string.h>
 #include <ctype.h>
 #include <limits.h>
-#include "config.h"
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#elif defined(_WIN32) && !defined(__MINGW32__)
+# include "sdcc_vc.h"
+#else
+# include "sdccconf.h"
+#endif
 #include "src/SDCCset.h"
 #include "src/SDCChasht.h"
 
@@ -270,9 +278,11 @@ extern short fullname;
 extern int srcMode;
 extern char contsim;
 char *searchDirsFname (char *);
-char *getNextCmdLine(void );
-void setCmdLine( char * );
-void stopCommandList( void );
+char *getNextCmdLine(void);
+void setCmdLine(char *);
+void stopCommandList(void);
+
+char *argsToCmdLine(char **args, int nargs);
 
 /* trimming functions */
 extern char *trim_left(char *s);

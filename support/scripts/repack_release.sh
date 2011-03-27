@@ -1,7 +1,7 @@
 #
 # repack_release.sh
 #
-# This script repacks sdcc Linux and Mac OS X snapshot build binary abd doc packages
+# This script repacks sdcc Linux and Mac OS X snapshot build binary and doc packages
 # into a sdcc release package.
 #
 # Repacking Linux package example:
@@ -36,7 +36,7 @@ function usage()
   doc_pkg=$2
   ver=$3
 
-  arch=$(expr $bin_pkg : 'sdcc-snapshot-\([^-]*-[^-]*-[^-]*\)-.*\.tar\.bz2')
+  arch=$(expr $(basename $bin_pkg) : 'sdcc-snapshot-\([^-]*-[^-]*-[^-]*\)-.*\.tar\.bz2')
   if [ -z "$arch" ]
   then
     fatal_error "$bin_pkg is not a sdcc binary package!"

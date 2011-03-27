@@ -23,6 +23,8 @@
 
 #define INCLUDE_DIR_SUFFIX    "\\include"
 #define LIB_DIR_SUFFIX        "\\lib"
+#define NON_FREE_INCLUDE_DIR_SUFFIX   "\\non-free\\include"
+#define NON_FREE_LIB_DIR_SUFFIX       "\\non-free\\lib"
 
 #define BIN2DATA_DIR          "\\.."
 #define PREFIX2BIN_DIR        "\\bin"
@@ -72,7 +74,8 @@
 #undef OPT_DISABLE_Z80
 #undef OPT_DISABLE_AVR
 #undef OPT_DISABLE_TININative
-#undef OPT_DISABLE_PIC
+#undef OPT_DISABLE_PIC14
+#undef OPT_DISABLE_PIC16
 #undef OPT_DISABLE_XA51
 
 #endif  /* SDCC_VC_HEADER */

@@ -239,7 +239,10 @@ transferRegReg (regs *sreg, regs *dreg, bool freesrc)
   dstidx = dreg->rIdx;
 
   if (srcidx==dstidx)
-    return;
+    {
+      hc08_useReg(dreg);
+      return;
+    }
 
   switch (dstidx)
     {
@@ -1701,7 +1704,7 @@ aopOp (operand * op, iCode * ic, bool result)
   if (IS_OP_LITERAL (op))
     {
       op->aop = aop = newAsmop (AOP_LIT);
-      aop->aopu.aop_lit = op->operand.valOperand;
+      aop->aopu.aop_lit = OP_VALUE (op);
       aop->size = getSize (operandType (op));
       aop->op = op;
       aop->isaddr = op->isaddr;
@@ -5296,7 +5299,6 @@ genXor (iCode * ic, iCode * ifx)
 {
   operand *left, *right, *result;
   int size, offset = 0;
-  unsigned long lit = 0L;
 
   D(emitcode (";     genXor",""));
 
@@ -5333,7 +5335,8 @@ genXor (iCode * ic, iCode * ifx)
   if (AOP_TYPE (result) == AOP_CRY)
     {
       symbol *tlbl;
-      wassertl (ifx, "AOP_CPY result without ifx");
+      // this can just happen, if ifx has been optimized away
+      // wassertl (ifx, "AOP_CPY result without ifx");
 
       tlbl = newiTempLabel (NULL);
       size = (AOP_SIZE (left) >= AOP_SIZE (right)) ? AOP_SIZE (left) : AOP_SIZE (right);
@@ -5341,25 +5344,28 @@ genXor (iCode * ic, iCode * ifx)
       while (size--)
         {
           loadRegFromAop (hc08_reg_a, AOP (left), offset);
-          if ((AOP_TYPE (right) == AOP_LIT)
-              && (((lit >> (offset*8)) & 0xff) == 0))
-            emitcode ("tsta","");
+          if (AOP_TYPE (right) == AOP_LIT && ((ulFromVal (AOP (right)->aopu.aop_lit) >> (offset * 8)) & 0xff) == 0)
+            emitcode ("tsta", "");
           else
             accopWithAop ("eor", AOP (right), offset);
-          hc08_freeReg( hc08_reg_a);
+
+          hc08_freeReg (hc08_reg_a);
           if (size)
             emitBranch ("bne", tlbl);
           else
             {
+              /*
+               * I think this is all broken here, (see simulation mismatch in bug1875933.c)
+               *   multiple calls to emitLabel() ?!
+               * and we can't genIfxJump, if there is none
+               */
               emitLabel (tlbl);
-              genIfxJump (ifx, "a");
+              if(ifx)
+                genIfxJump (ifx, "a");
             }
           offset++;
         }
     }
-
-  if (AOP_TYPE (right) == AOP_LIT)
-    lit = ulFromVal (AOP (right)->aopu.aop_lit);
 
   size = AOP_SIZE (result);
   offset = 0;
@@ -5368,7 +5374,7 @@ genXor (iCode * ic, iCode * ifx)
       loadRegFromAop (hc08_reg_a, AOP (left), offset);
       accopWithAop ("eor", AOP (right), offset);
       storeRegToAop (hc08_reg_a, AOP (result), offset++);
-      hc08_freeReg( hc08_reg_a);
+      hc08_freeReg (hc08_reg_a);
     }
 
 //release:
@@ -7363,7 +7369,6 @@ genPointerGet (iCode * ic, iCode *pi, iCode *ifx)
           if (!ifx)
             storeRegToAop (hc08_reg_a, AOP (result), offset);
           offset--;
-          hc08_freeReg (hc08_reg_a);
         }
     }
 
@@ -7894,7 +7899,6 @@ genAddrOf (iCode * ic)
 
 release:
   freeAsmop (IC_RESULT (ic), NULL, ic, TRUE);
-
 }
 
 /*-----------------------------------------------------------------*/
@@ -8002,7 +8006,6 @@ genJumpTab (iCode * ic)
   for (jtab = setFirstItem (IC_JTLABELS (ic)); jtab;
        jtab = setNextItem (IC_JTLABELS (ic)))
     emitcode (".db", ">%05d$", jtab->key + 100);
-
 }
 
 /*-----------------------------------------------------------------*/
@@ -8026,11 +8029,9 @@ genCast (iCode * ic)
   aopOp (right, ic, FALSE);
   aopOp (result, ic, FALSE);
 
-
   /* if they are the same size : or less */
   if (AOP_SIZE (result) <= AOP_SIZE (right))
     {
-
       /* if they are in the same place */
       #if 0
       if (sameRegs (AOP (right), AOP (result)))
@@ -8048,11 +8049,9 @@ genCast (iCode * ic)
       goto release;
     }
 
-
   /* if the result is of type pointer */
   if (IS_PTR (ctype))
     {
-
       int p_type;
       sym_link *type = operandType (right);
       sym_link *etype = getSpec (type);
@@ -8082,21 +8081,6 @@ genCast (iCode * ic)
               offset++;
             }
           /* the last byte depending on type */
-#if 0
-            {
-                int gpVal = pointerTypeToGPByte(p_type, NULL, NULL);
-                char gpValStr[10];
-
-                if (gpVal == -1)
-                {
-                    // pointerTypeToGPByte will have bitched.
-                    exit(1);
-                }
-
-                sprintf(gpValStr, "#0x%x", gpVal);
-                aopPut (AOP (result), gpValStr, GPTRSIZE - 1);
-            }
-#endif
           goto release;
         }
 

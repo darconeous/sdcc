@@ -8,11 +8,10 @@
 #include "main.h"
 #include "ralloc.h"
 #include "gen.h"
-#include "BuildCmd.h"
-#include "MySystem.h"
 #include "dbuf_string.h"
 #include "../SDCCutil.h"
 #include "../SDCCglobl.h"
+#include "../SDCCsystem.h"
 static char _defaultRules[] =
 {
 #include "peeph.rul"
@@ -28,7 +27,7 @@ static OPTION _ds390_options[] =
     { 0, OPTION_STACK_8BIT,     NULL, "use the 8bit stack for the ds390 (not supported yet)" },
     { 0, OPTION_STACK_SIZE,     &options.stack_size, "Tells the linker to allocate this space for stack", CLAT_INTEGER },
     { 0, "--pack-iram",         NULL, "Tells the linker to pack variables in internal ram (default)"},
-    { 0, "--no-pack-iram",      &options.no_pack_iram, "Tells the linker not to pack variables in internal ram"},
+    { 0, "--no-pack-iram",      &options.no_pack_iram, "Deprecated: Tells the linker not to pack variables in internal ram"},
     { 0, "--stack-10bit",       &options.stack10bit, "use the 10bit stack for ds390 (default)" },
     { 0, "--use-accelerator",   &options.useAccelerator, "generate code for ds390 arithmetic accelerator"},
     { 0, "--protect-sp-update", &options.protect_sp_update, "will disable interrupts during ESP:SP updates"},
@@ -79,7 +78,7 @@ static builtins __ds390_builtins[] = {
     { "__builtin_swapw","us",1,{"us"}},                /* unsigned short __builtin_swapw (unsigned short) */
     { "__builtin_memcmp_x2x","c",3,{"cx*","cx*","i"}}, /* void __builtin_memcmp_x2x (xdata char *,xdata char *,int) */
     { "__builtin_memcmp_c2x","c",3,{"cx*","cp*","i"}}, /* void __builtin_memcmp_c2x (xdata char *,code  char *,int) */
-    { NULL , NULL,0, {NULL}}                       /* mark end of table */
+    { NULL , NULL,0, {NULL}}                           /* mark end of table */
 };
 void ds390_assignRegisters (ebbIndex * ebbi);
 
@@ -290,7 +289,9 @@ _ds390_genIVT (struct dbuf_s * oBuf, symbol ** interrupts, int maxInterrupts)
       return TRUE;
     }
 
-  dbuf_printf (oBuf, "\tajmp\t__reset_vect\n");
+  dbuf_printf (oBuf, ".flat24 off\t\t; 16 bit addressing\n");
+  dbuf_printf (oBuf, "\tljmp\t__reset_vect\n");
+  dbuf_printf (oBuf, ".flat24 on\t\t; 24 bit flat addressing\n");
 
   /* now for the other interrupts */
   for (i = 0; i < maxInterrupts; i++)
@@ -305,7 +306,9 @@ _ds390_genIVT (struct dbuf_s * oBuf, symbol ** interrupts, int maxInterrupts)
         }
     }
 
+  dbuf_printf (oBuf, ".flat24 off\t\t; 16 bit addressing\n");
   dbuf_printf (oBuf, "__reset_vect:\n\tljmp\t__sdcc_gsinit_startup\n");
+  dbuf_printf (oBuf, ".flat24 on\t\t; 24 bit flat addressing\n");
 
   return TRUE;
 }
@@ -335,7 +338,16 @@ _ds390_genInitStartup (FILE *of)
       fprintf (of, "\tmov\tsp,#__start__stack - 1\n");     /* MOF */
     }
 
-  fprintf (of, "\tlcall\t__sdcc_external_startup\n");
+  if ((options.model == MODEL_FLAT24) && TARGET_IS_DS390)
+    {
+      fputs (".flat24 off\t\t; 16 bit addressing\n", of);
+      fprintf (of, "\tlcall\t__sdcc_external_startup\n");
+      fputs (".flat24 on\t\t; 24 bit flat addressing\n", of);
+    }
+  else
+    {
+      fprintf (of, "\tlcall\t__sdcc_external_startup\n");
+    }
   fprintf (of, "\tmov\ta,dpl\n");
   fprintf (of, "\tjz\t__sdcc_init_data\n");
   fprintf (of, "\tljmp\t__sdcc_program_startup\n");
@@ -890,7 +902,7 @@ get_model (void)
         return "large";
 
     case MODEL_FLAT24:
-        return port->target_name;
+        return port->target;
 
     default:
       werror (W_UNKNOWN_MODEL, __FILE__, __LINE__);
@@ -1057,7 +1069,7 @@ static OPTION _tininative_options[] =
     { 0, OPTION_STACK_8BIT,     NULL, "use the 8bit stack for the ds390 (not supported yet)" },
     { 0, OPTION_STACK_SIZE,     &options.stack_size, "Tells the linker to allocate this space for stack", CLAT_INTEGER },
     { 0, "--pack-iram",         NULL, "Tells the linker to pack variables in internal ram (default)"},
-    { 0, "--no-pack-iram",      &options.no_pack_iram, "Tells the linker not to pack variables in internal ram"},
+    { 0, "--no-pack-iram",      &options.no_pack_iram, "Deprecated: Tells the linker not to pack variables in internal ram"},
     { 0, "--stack-10bit",       &options.stack10bit, "use the 10bit stack for ds390 (default)" },
     { 0, "--use-accelerator",   &options.useAccelerator, "generate code for ds390 arithmetic accelerator"},
     { 0, "--protect-sp-update", &options.protect_sp_update, "will disable interrupts during ESP:SP updates"},
@@ -1159,22 +1171,26 @@ static void _tininative_genAssemblerEnd (FILE * of)
 /* tininative assembler , calls "macro", if it succeeds calls "a390" */
 static void _tininative_do_assemble (set *asmOptions)
 {
+    char *buf;
     static const char *macroCmd[] = {
         "macro","$1.a51",NULL
     };
     static const char *a390Cmd[] = {
         "a390","$1.mpp",NULL
     };
-    char buffer[100];
 
-    buildCmdLine(buffer,macroCmd,dstFileName,NULL,NULL,NULL);
-    if (my_system(buffer)) {
+    buf = buildCmdLine(macroCmd, dstFileName, NULL, NULL, NULL);
+    if (sdcc_system(buf)) {
+        Safe_free (buf);
         exit(1);
     }
-    buildCmdLine(buffer,a390Cmd,dstFileName,NULL,NULL,asmOptions);
-    if (my_system(buffer)) {
+    Safe_free (buf);
+    buf = buildCmdLine(a390Cmd, dstFileName, NULL, NULL, asmOptions);
+    if (sdcc_system(buf)) {
+        Safe_free (buf);
         exit(1);
     }
+    Safe_free (buf);
 }
 
 /* list of key words used by TININative */
@@ -1410,7 +1426,7 @@ static OPTION _ds400_options[] =
     { 0, OPTION_STACK_8BIT,     NULL, "use the 8bit stack for the ds400 (not supported yet)" },
     { 0, OPTION_STACK_SIZE,     &options.stack_size, "Tells the linker to allocate this space for stack", CLAT_INTEGER },
     { 0, "--pack-iram",         NULL, "Tells the linker to pack variables in internal ram (default)"},
-    { 0, "--no-pack-iram",      &options.no_pack_iram, "Tells the linker not to pack variables in internal ram"},
+    { 0, "--no-pack-iram",      &options.no_pack_iram, "Deprecated: Tells the linker not to pack variables in internal ram"},
     { 0, "--stack-10bit",       &options.stack10bit, "use the 10bit stack for ds400 (default)" },
     { 0, "--use-accelerator",   &options.useAccelerator, "generate code for ds400 arithmetic accelerator"},
     { 0, "--protect-sp-update", &options.protect_sp_update, "will disable interrupts during ESP:SP updates"},
@@ -1543,11 +1559,14 @@ PORT ds400_port =
     NULL,                       /* crt */
     _libs_ds400,                /* libs */
   },
-  {
+  {                             /* Peephole optimizer */
     _defaultRules,
     getInstructionSize,
     getRegsRead,
-    getRegsWritten
+    getRegsWritten,
+    0,
+    0,
+    0,
   },
   {
         /* Sizes: char, short, int, long, ptr, fptr, gptr, bit, float, max */
