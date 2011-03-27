@@ -448,6 +448,10 @@ struct
    "pointer target lost %s qualifier" },
 { W_DEPRECATED_KEYWORD, ERROR_LEVEL_WARNING,
    "keyword '%s' is deprecated, use '%s' instead" },
+{ E_BAD_DESIGNATOR, ERROR_LEVEL_ERROR,
+   "Invalid designator for designated initializer" },
+{ W_DUPLICATE_INIT, ERROR_LEVEL_WARNING,
+   "Duplicate initializer at position %d; ignoring previous." },
 };
 
 /*
