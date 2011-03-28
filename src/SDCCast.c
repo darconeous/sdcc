@@ -1129,7 +1129,7 @@ createIvalArray (ast * sym, sym_link * type, initList * ilist, ast * rootValue)
       return NULL;
     }
 
-  if (port->arrayInitializerSuppported && convertIListToConstList (reorderIlist(type,ilist), &literalL, lcnt))
+  if (port->arrayInitializerSuppported && convertIListToConstList (,ilist, &literalL, lcnt))
     {
       ast *aSym;
 
